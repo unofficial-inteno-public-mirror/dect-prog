@@ -70,7 +70,7 @@ int main(void) {
 	int state = BOOT_STATE;
 	int epoll_fd, nfds, i, count;
 	uint8_t buf[BUF_SIZE];
-	void (*state_event_handler)(uint8_t *buf) = handle_boot_package;
+	void (*state_event_handler)(uint8_t *buf);
 	
 	epoll_fd = epoll_create(10);
 	if (epoll_fd == -1) {
@@ -92,6 +92,7 @@ int main(void) {
 
 
 	init_boot_state(dect_fd);
+	state_event_handler = handle_boot_package;
 
 	for(;;) {
 
