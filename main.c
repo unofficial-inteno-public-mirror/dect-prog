@@ -70,7 +70,8 @@ int main(void) {
 	int state = BOOT_STATE;
 	int epoll_fd, nfds, i, count;
 	uint8_t buf[BUF_SIZE];
-
+	void (*state_event_handler)(uint8_t *buf) = handle_boot_package;
+	
 	epoll_fd = epoll_create(10);
 	if (epoll_fd == -1) {
 		exit_failure("epoll_create\n");
@@ -103,7 +104,7 @@ int main(void) {
 			if (events[i].data.fd == dect_fd) {
 				count = read(dect_fd, buf, BUF_SIZE);
 				dump_package(buf, count);
-				handle_boot_package(buf);
+				state_event_handler(buf);
 			}
 		}
 		
