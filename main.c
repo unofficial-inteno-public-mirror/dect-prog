@@ -15,7 +15,12 @@
 
 int dect_fd, state;
 
+struct state_handler {
+	void (*init_state)(void);
+	void (*event_handler)(uint8_t *buf);
+};
 
+struct state_handler s;		
 
 void write_dect(void *data, int size) {
 
@@ -63,6 +68,11 @@ static void dump_package(unsigned char *buf, int size) {
 }
 
 
+void transition(int state) {
+
+	init_boot_state(dect_fd);
+	s.event_handler = handle_boot_package;
+}
 
 int main(void) {
 	
@@ -90,9 +100,8 @@ int main(void) {
 		exit_failure("epoll_ctl\n");
 	}
 
-
-	init_boot_state(dect_fd);
-	state_event_handler = handle_boot_package;
+	/* Initial transition */
+	transition(BOOT_STATE);
 
 	for(;;) {
 
@@ -105,7 +114,9 @@ int main(void) {
 			if (events[i].data.fd == dect_fd) {
 				count = read(dect_fd, buf, BUF_SIZE);
 				dump_package(buf, count);
-				state_event_handler(buf);
+
+				/* Dispatch to current event handler */
+				s.event_handler(buf);
 			}
 		}
 		
