@@ -4,7 +4,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-
+#include "error.h"
 
 int tty_set_raw(int fd)
 {
@@ -35,25 +35,13 @@ int tty_set_baud(int fd, int baud)
 	speed_t rate;
 
 	if (tcgetattr(fd, &tp) == -1)
-		return -1;
+		exit_failure("tcgetattr");
 	
 	if (cfsetospeed(&tp, baud) == -1)
-		return -1;
+		exit_failure("cfsetospeed");
 
 	if (tcsetattr(fd, TCSAFLUSH, &tp) == -1)
-		return -1;
-
+		exit_failure("tcsetattr");
 }
 
 
-/* int main(void) */
-/* { */
-/* 	int fd = open("/dev/ttyUSB1", O_RDWR); */
-/* 	if (fd == -1)  */
-/* 		return -1; */
-
-/* 	tty_set_raw(fd); */
-/* 	tty_set_baud(fd, B19200); */
-
-/* 	return 0; */
-/* } */

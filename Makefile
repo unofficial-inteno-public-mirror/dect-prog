@@ -1,3 +1,4 @@
 
 all:
-	gcc -o boot boot.c tty.c
+	gcc -o boot boot.c tty.c error.c
+

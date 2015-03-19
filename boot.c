@@ -20,6 +20,7 @@
 
 #include "dect.h"
 #include "tty.h"
+#include "error.h"
 
 
 struct bin_img {
@@ -31,26 +32,12 @@ struct bin_img {
 };
 
 #define MAX_EVENTS 10
+#define BUF_SIZE 500
 
 static struct bin_img preloader;
 static struct bin_img *pr = &preloader;
 int dect_fd, state;
 
-static void exit_failure(const char *format, ...)
-{
-#define BUF_SIZE 500
-	char err[BUF_SIZE], msg[BUF_SIZE];
-	va_list ap;
-	
-	strncpy(err, strerror(errno), BUF_SIZE);
-
-	va_start(ap, format);
-	vsprintf(msg, format, ap);
-	va_end(ap);
-	
-	fprintf(stderr, "%s: %s\n", msg, err);
-	exit(EXIT_FAILURE);
-}
 
 
 static void read_preloader(void) {
