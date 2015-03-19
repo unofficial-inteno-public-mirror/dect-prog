@@ -6,6 +6,7 @@
 
 #include "error.h"
 
+
 int tty_set_raw(int fd)
 {
 	struct termios t;

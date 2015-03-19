@@ -81,9 +81,6 @@ int main(void) {
 		exit_failure("open\n");
 	}
 
-	tty_set_raw(dect_fd);
-	tty_set_baud(dect_fd, B19200);
-	
 
 	ev.events = EPOLLIN;
 	ev.data.fd = dect_fd;
@@ -91,6 +88,9 @@ int main(void) {
 	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, dect_fd, &ev) == -1) {
 		exit_failure("epoll_ctl\n");
 	}
+
+
+	init_boot_state(dect_fd);
 
 	for(;;) {
 

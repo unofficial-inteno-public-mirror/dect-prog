@@ -139,7 +139,12 @@ static void send_preloader_start(void) {
 
 
 
+void init_boot_state(int dect_fd) {
 
+	tty_set_raw(dect_fd);
+	tty_set_baud(dect_fd, B19200);
+	
+}
 
 
 void handle_boot_package(unsigned char *buf) {
