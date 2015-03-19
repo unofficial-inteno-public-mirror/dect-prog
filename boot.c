@@ -16,10 +16,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <sys/epoll.h>
-
-
+#include <termios.h>
 
 #include "dect.h"
+#include "tty.h"
 
 
 struct bin_img {
@@ -257,6 +257,10 @@ int main(void) {
 	if (dect_fd == -1) {
 		exit_failure("open\n");
 	}
+
+	tty_set_raw(dect_fd);
+	tty_set_baud(dect_fd, B19200);
+	
 
 	ev.events = EPOLLIN;
 	ev.data.fd = dect_fd;
