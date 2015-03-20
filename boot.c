@@ -23,6 +23,7 @@
 #include "error.h"
 #include "state.h"
 #include "boot.h"
+#include "util.h"
 
 
 struct bin_img {
@@ -98,7 +99,7 @@ static void calculate_checksum(void) {
 }
 
 
-static void send_size(void) {
+static void send_size(int fd) {
 
 	unsigned char o_buf[3];
 
@@ -110,33 +111,35 @@ static void send_size(void) {
 	*(o_buf + 2) = pr->size_msb;
 
 	printf("SOH\n");
-	write_dect(o_buf, 3);
+	util_write(o_buf, 3, fd);
 }
 
 
-static void send_preloader(void) {
+static void send_preloader(int fd) {
   
-	write_dect(pr->img, pr->size);
+	util_write(pr->img, pr->size, fd);
+	free(pr->img);
+	
 }
 
-static void send_ack(void) {
+static void send_ack(int fd) {
   
 	uint8_t r[1];
 
 	r[0] = ACK;
 
-	write_dect(r, 1);
+	util_write(r, 1, fd);
 }
 
 #define PRELOADER_START 1
 
-static void send_preloader_start(void) {
+static void send_preloader_start(int fd) {
   
 	uint8_t r[1];
 
 	r[0] = PRELOADER_START;
 
-	write_dect(r, 1);
+	util_write(r, 1, fd);
 }
 
 
@@ -151,7 +154,7 @@ void init_boot_state(int dect_fd) {
 }
 
 
-void handle_boot_package(unsigned char *buf) {
+void handle_boot_package(unsigned char *buf, int fd) {
 
 	//  RosPrimitiveType primitive = ((ApifpccEmptySignalType *) buf)->Primitive;
 	//  struct packet *p = (struct packet *)buf;
@@ -164,14 +167,14 @@ void handle_boot_package(unsigned char *buf) {
 		break;
 	case STX:
 		printf("\n\n\nSTX\n");
-		send_size();
+		send_size(fd);
 		break;
 	case ETX:
 		printf("ETX\n");
 		break;
 	case ACK:
 		printf("ACK\n");
-		send_preloader();
+		send_preloader(fd);
 		break;
 	case NACK:
 		printf("NACK\n\n");
@@ -179,7 +182,7 @@ void handle_boot_package(unsigned char *buf) {
 	default:
 		if (buf[0] == pr->checksum) {
 			printf("Checksum ok!\n");
-			send_ack();
+			send_ack(fd);
 			printf("state: PRELOADER_STATE\n");
 			//state = PRELOADER_STATE;
 		/* 	/\* printf("send_preloader_start()\n"); *\/ */

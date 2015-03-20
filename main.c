@@ -17,17 +17,10 @@
 #define MAX_EVENTS 10
 #define BUF_SIZE 500
 
-int dect_fd;
 
 
 
-void write_dect(void *data, int size) {
 
-	util_dump(data, size, "[WRITE]");
-	write(dect_fd, data, size);
-
-	return;
-}
 
 
 
@@ -39,7 +32,8 @@ int main(void) {
 	int state = BOOT_STATE;
 	int epoll_fd, nfds, i, count;
 	uint8_t buf[BUF_SIZE];
-	void (*state_event_handler)(uint8_t *buf);
+	void (*state_event_handler)(uint8_t *buf, int fd);
+	int dect_fd;
  	
 	epoll_fd = epoll_create(10);
 	if (epoll_fd == -1) {
@@ -59,7 +53,7 @@ int main(void) {
 		exit_failure("epoll_ctl\n");
 	}
 	
-	state_add_handler(boot_state);
+	state_add_handler(boot_state, dect_fd);
 	
 	/* Initial transition */
 	state_transition(BOOT_STATE);
@@ -78,7 +72,7 @@ int main(void) {
 
 				/* Dispatch to current event handler */
 				state_event_handler = state_get_handler();
-				state_event_handler(buf);
+				state_event_handler(buf, dect_fd);
 			}
 		}
 		

@@ -5,12 +5,12 @@
 struct state_handler current_state;
 
 struct state_handler * s = &current_state;
+int source;
 
-extern int dect_fd;
-
-void state_add_handler(struct state_handler *s) {
+void state_add_handler(struct state_handler *s, int fd) {
 	
 	memcpy((void *)&current_state, (void *)s, sizeof(struct state_handler));
+	source = fd;
 	
 }
 
@@ -22,7 +22,7 @@ void * state_get_handler(void) {
 
 void state_transition(int state) {
 	
-	s->init_state(dect_fd);
+	s->init_state(source);
 	return;
 }
 
