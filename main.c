@@ -20,7 +20,13 @@
 
 
 
-
+typedef struct event {
+	int fd;
+	uint8_t *in;
+	int incount;
+	uint8_t *out;
+	int outcount;
+} event_t;
 
 
 
@@ -34,7 +40,11 @@ int main(void) {
 	uint8_t buf[BUF_SIZE];
 	void (*state_event_handler)(uint8_t *buf, int fd);
 	int dect_fd;
- 	
+	event_t event;
+	event_t *e = &event;
+	e->in = buf;
+
+
 	epoll_fd = epoll_create(10);
 	if (epoll_fd == -1) {
 		exit_failure("epoll_create\n");
@@ -67,12 +77,17 @@ int main(void) {
 
 		for (i = 0; i < nfds; ++i) {
 			if (events[i].data.fd == dect_fd) {
-				count = read(dect_fd, buf, BUF_SIZE);
-				util_dump(buf, count, "[READ]");
+
+				e->fd = dect_fd;
+				e->incount = read(e->fd, e->in, BUF_SIZE);
+				util_dump(e->in, e->incount, "[READ]");
+				
+
+				
 
 				/* Dispatch to current event handler */
 				state_event_handler = state_get_handler();
-				state_event_handler(buf, dect_fd);
+				state_event_handler(e->in, e->fd);
 			}
 		}
 		
