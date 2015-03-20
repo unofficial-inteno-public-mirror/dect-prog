@@ -9,18 +9,15 @@
 #include "tty.h"
 #include "error.h"
 #include "boot.h"
+#include "state.h"
+
 
 #define MAX_EVENTS 10
 #define BUF_SIZE 500
 
-int dect_fd, state;
+int dect_fd;
 
-struct state_handler {
-	void (*init_state)(void);
-	void (*event_handler)(uint8_t *buf);
-};
 
-struct state_handler s;		
 
 void write_dect(void *data, int size) {
 
@@ -68,11 +65,6 @@ static void dump_package(unsigned char *buf, int size) {
 }
 
 
-void transition(int state) {
-
-	init_boot_state(dect_fd);
-	s.event_handler = handle_boot_package;
-}
 
 int main(void) {
 	
@@ -81,7 +73,7 @@ int main(void) {
 	int epoll_fd, nfds, i, count;
 	uint8_t buf[BUF_SIZE];
 	void (*state_event_handler)(uint8_t *buf);
-	
+ 	
 	epoll_fd = epoll_create(10);
 	if (epoll_fd == -1) {
 		exit_failure("epoll_create\n");
@@ -99,9 +91,11 @@ int main(void) {
 	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, dect_fd, &ev) == -1) {
 		exit_failure("epoll_ctl\n");
 	}
-
+	
+	state_add_handler(boot_state);
+	
 	/* Initial transition */
-	transition(BOOT_STATE);
+	state_transition(BOOT_STATE);
 
 	for(;;) {
 
@@ -116,7 +110,8 @@ int main(void) {
 				dump_package(buf, count);
 
 				/* Dispatch to current event handler */
-				s.event_handler(buf);
+				state_event_handler = state_get_handler();
+				state_event_handler(buf);
 			}
 		}
 		

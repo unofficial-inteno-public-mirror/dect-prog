@@ -69,11 +69,6 @@ enum packet_resp_type {
 };
 
 
-enum program_states {
-BOOT_STATE,
-PRELOADER_STATE,
-  FLASHLOADER_STATE,
-};
 
 
 

@@ -1,4 +1,4 @@
 
 all:
-	gcc -o prog boot.c tty.c error.c main.c
+	gcc -o prog boot.c tty.c error.c main.c state.c
 

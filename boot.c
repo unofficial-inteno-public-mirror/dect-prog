@@ -21,6 +21,8 @@
 #include "dect.h"
 #include "tty.h"
 #include "error.h"
+#include "state.h"
+#include "boot.h"
 
 
 struct bin_img {
@@ -37,7 +39,7 @@ struct bin_img {
 static struct bin_img preloader;
 static struct bin_img *pr = &preloader;
 
-extern int state;
+
 
 
 
@@ -140,6 +142,8 @@ static void send_preloader_start(void) {
 
 
 void init_boot_state(int dect_fd) {
+	
+	printf("BOOT_STATE\n");
 
 	tty_set_raw(dect_fd);
 	tty_set_baud(dect_fd, B19200);
@@ -177,7 +181,7 @@ void handle_boot_package(unsigned char *buf) {
 			printf("Checksum ok!\n");
 			send_ack();
 			printf("state: PRELOADER_STATE\n");
-			state = PRELOADER_STATE;
+			//state = PRELOADER_STATE;
 		/* 	/\* printf("send_preloader_start()\n"); *\/ */
 		/* 	/\* sleep(1); *\/ */
 		/* 	/\* send_preloader_start(); *\/ */
@@ -192,3 +196,11 @@ void handle_boot_package(unsigned char *buf) {
 
 
 
+
+struct state_handler boot_handler = {
+	.state = BOOT_STATE,
+	.init_state = init_boot_state,
+	.event_handler = handle_boot_package,
+};
+
+struct state_handler * boot_state = &boot_handler;
