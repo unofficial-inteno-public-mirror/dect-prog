@@ -3,13 +3,6 @@
 
 #include "util.h"
 
-void util_write(void *data, int size, int fd) {
-
-	util_dump(data, size, "[WRITE]");
-	write(fd, data, size);
-
-	return;
-}
 
 
 void util_dump(unsigned char *buf, int size, char *start) {

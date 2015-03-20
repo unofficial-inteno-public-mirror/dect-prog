@@ -4,6 +4,7 @@
 #include <sys/epoll.h>
 #include <termios.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "dect.h"
 #include "tty.h"
@@ -15,7 +16,7 @@
 
 
 #define MAX_EVENTS 10
-#define BUF_SIZE 500
+#define BUF_SIZE 5000
 
 
 int main(void) {
@@ -76,7 +77,14 @@ int main(void) {
 
 				/* Write reply if there is one */
 				if (e->outcount > 0) {
-					util_write(e->out, e->outcount, e->fd);
+					util_dump(e->out, e->outcount, "[WRITE]");
+					write(e->fd, e->out, e->outcount);
+
+					/* Reset event_t */
+					e->outcount = 0;
+					e->incount = 0;
+					memset(e->out, 0, BUF_SIZE);
+					memset(e->in, 0, BUF_SIZE);
 				}
 			}
 		}

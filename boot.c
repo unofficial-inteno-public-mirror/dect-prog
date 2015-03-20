@@ -92,8 +92,6 @@ static void calculate_checksum(void) {
 
 static void send_size(event_t *e) {
 
-	read_preloader();
-	calculate_checksum();
 
 	/* Reply */
 	e->out[0] = SOH;
@@ -106,31 +104,16 @@ static void send_size(event_t *e) {
 }
 
 
-static void send_preloader(int fd) {
+static void send_preloader(event_t *e) {
   
-	util_write(pr->img, pr->size, fd);
-	free(pr->img);
-	
+	memcpy(e->out, pr->img, pr->size);
+	e->outcount = pr->size;
 }
 
-static void send_ack(int fd) {
+static void send_ack(event_t *e) {
   
-	uint8_t r[1];
-
-	r[0] = ACK;
-
-	util_write(r, 1, fd);
-}
-
-#define PRELOADER_START 1
-
-static void send_preloader_start(int fd) {
-  
-	uint8_t r[1];
-
-	r[0] = PRELOADER_START;
-
-	util_write(r, 1, fd);
+	e->out[0] = SOH;
+	e->outcount = 1;
 }
 
 
@@ -139,16 +122,15 @@ void init_boot_state(int dect_fd) {
 	
 	printf("BOOT_STATE\n");
 
+	read_preloader();
+	calculate_checksum();
+
 	tty_set_raw(dect_fd);
 	tty_set_baud(dect_fd, B19200);
-	
 }
 
 
 void handle_boot_package(event_t *e) {
-
-	//  RosPrimitiveType primitive = ((ApifpccEmptySignalType *) buf)->Primitive;
-	//  struct packet *p = (struct packet *)buf;
 
 	
 	switch (e->in[0]) {
@@ -165,7 +147,7 @@ void handle_boot_package(event_t *e) {
 		break;
 	case ACK:
 		printf("ACK\n");
-		send_preloader(e->fd);
+		send_preloader(e);
 		break;
 	case NACK:
 		printf("NACK\n\n");
@@ -173,12 +155,8 @@ void handle_boot_package(event_t *e) {
 	default:
 		if (e->in[0] == pr->checksum) {
 			printf("Checksum ok!\n");
-			send_ack(e->fd);
+			send_ack(e);
 			printf("state: PRELOADER_STATE\n");
-			//state = PRELOADER_STATE;
-		/* 	/\* printf("send_preloader_start()\n"); *\/ */
-		/* 	/\* sleep(1); *\/ */
-		/* 	/\* send_preloader_start(); *\/ */
 		} else {
 			printf("Unknown boot packet: %x\n", e->in[0]);
 		}
