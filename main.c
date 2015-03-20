@@ -10,6 +10,8 @@
 #include "error.h"
 #include "boot.h"
 #include "state.h"
+#include "util.h"
+
 
 
 #define MAX_EVENTS 10
@@ -21,48 +23,13 @@ int dect_fd;
 
 void write_dect(void *data, int size) {
 
-	int i, dumpsize;
-	int maxdump = 100;
-	unsigned char* cdata = (unsigned char*)data;
-	printf("[WDECT][%04d] - ",size);
-    
-	if ( size > maxdump ) {
-		dumpsize = maxdump; 
-	} else {
-		dumpsize = size; 
-	}
-
-	for (i=0 ; i<dumpsize ; i++) {
-		printf("%02x ",cdata[i]);
-	}
-	printf("\n");
-
+	util_dump(data, size, "[WRITE]");
 	write(dect_fd, data, size);
 
 	return;
 }
 
 
-static void dump_package(unsigned char *buf, int size) {
-
-	int i, dumpsize;
-	int maxdump = 100;
-	unsigned char* cdata = (unsigned char*)buf;
-
-	printf("[RDECT][%04d] - ",size);
-    
-	if ( size > maxdump ) {
-		dumpsize = maxdump; 
-	} else {
-		dumpsize = size; 
-	}
-
-	for (i=0 ; i<dumpsize ; i++) {
-		printf("%02x ",cdata[i]);
-	}
-	printf("\n");
-	
-}
 
 
 
@@ -107,7 +74,7 @@ int main(void) {
 		for (i = 0; i < nfds; ++i) {
 			if (events[i].data.fd == dect_fd) {
 				count = read(dect_fd, buf, BUF_SIZE);
-				dump_package(buf, count);
+				util_dump(buf, count, "[READ]");
 
 				/* Dispatch to current event handler */
 				state_event_handler = state_get_handler();
