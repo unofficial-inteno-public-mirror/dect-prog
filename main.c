@@ -18,27 +18,13 @@
 #define BUF_SIZE 500
 
 
-
-
-typedef struct event {
-	int fd;
-	uint8_t *in;
-	int incount;
-	uint8_t *out;
-	int outcount;
-} event_t;
-
-
-
-
-
 int main(void) {
 	
 	struct epoll_event ev, events[MAX_EVENTS];
 	int state = BOOT_STATE;
 	int epoll_fd, nfds, i, count;
 	uint8_t buf[BUF_SIZE];
-	void (*state_event_handler)(uint8_t *buf, int fd);
+	void (*state_event_handler)(event_t *e);
 	int dect_fd;
 	event_t event;
 	event_t *e = &event;
@@ -82,12 +68,9 @@ int main(void) {
 				e->incount = read(e->fd, e->in, BUF_SIZE);
 				util_dump(e->in, e->incount, "[READ]");
 				
-
-				
-
 				/* Dispatch to current event handler */
 				state_event_handler = state_get_handler();
-				state_event_handler(e->in, e->fd);
+				state_event_handler(e);
 			}
 		}
 		

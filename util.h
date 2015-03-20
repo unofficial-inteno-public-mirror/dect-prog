@@ -10,3 +10,4 @@ struct bin_img {
   uint8_t size_lsb;
   uint8_t checksum;
 };
+

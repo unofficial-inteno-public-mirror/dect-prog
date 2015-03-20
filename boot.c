@@ -145,42 +145,42 @@ void init_boot_state(int dect_fd) {
 }
 
 
-void handle_boot_package(unsigned char *buf, int fd) {
+void handle_boot_package(event_t *e) {
 
 	//  RosPrimitiveType primitive = ((ApifpccEmptySignalType *) buf)->Primitive;
 	//  struct packet *p = (struct packet *)buf;
 
 	
-	switch (buf[0]) {
+	switch (e->in[0]) {
 
 	case SOH:
 		printf("SOH\n");
 		break;
 	case STX:
 		printf("\n\n\nSTX\n");
-		send_size(fd);
+		send_size(e->fd);
 		break;
 	case ETX:
 		printf("ETX\n");
 		break;
 	case ACK:
 		printf("ACK\n");
-		send_preloader(fd);
+		send_preloader(e->fd);
 		break;
 	case NACK:
 		printf("NACK\n\n");
 		break;
 	default:
-		if (buf[0] == pr->checksum) {
+		if (e->in[0] == pr->checksum) {
 			printf("Checksum ok!\n");
-			send_ack(fd);
+			send_ack(e->fd);
 			printf("state: PRELOADER_STATE\n");
 			//state = PRELOADER_STATE;
 		/* 	/\* printf("send_preloader_start()\n"); *\/ */
 		/* 	/\* sleep(1); *\/ */
 		/* 	/\* send_preloader_start(); *\/ */
 		} else {
-			printf("Unknown boot packet: %x\n", buf[0]);
+			printf("Unknown boot packet: %x\n", e->in[0]);
 		}
 		break;
 	}

@@ -8,10 +8,19 @@ enum states {
 };
 
 
+typedef struct event {
+	int fd;
+	uint8_t *in;
+	int incount;
+	uint8_t *out;
+	int outcount;
+} event_t;
+
+
 struct state_handler {
 	int state;
 	void (*init_state)(int fd);
-	void (*event_handler)(uint8_t *buf, int fd);
+	void (*event_handler)(event_t *e);
 };
 
 
