@@ -26,13 +26,6 @@
 #include "util.h"
 
 
-struct bin_img {
-  uint8_t *img;
-  int size;
-  uint8_t size_msb;
-  uint8_t size_lsb;
-  uint8_t checksum;
-};
 
 
 #define BUF_SIZE 500
@@ -87,15 +80,13 @@ static void calculate_checksum(void) {
 	int i;
 	uint8_t * FlashLoaderCodePtr = pr->img;
 
-	// Calculate Checksum of flash loader                                                                                                        
-	for (i=0; i< pr->size; i++)
-		{
-			chk^=FlashLoaderCodePtr[i];
-		}
+	// Calculate Checksum of flash loader
+	for (i=0; i< pr->size; i++) {
+		chk^=FlashLoaderCodePtr[i];
+	}
 
 	pr->checksum = chk;
 	printf("checksum: %x\n", pr->checksum);
-  
 }
 
 
