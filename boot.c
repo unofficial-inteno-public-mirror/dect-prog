@@ -90,19 +90,19 @@ static void calculate_checksum(void) {
 }
 
 
-static void send_size(int fd) {
-
-	unsigned char o_buf[3];
+static void send_size(event_t *e) {
 
 	read_preloader();
 	calculate_checksum();
 
-	*(o_buf + 0) = SOH;
-	*(o_buf + 1) = pr->size_lsb;
-	*(o_buf + 2) = pr->size_msb;
+	/* Reply */
+	e->out[0] = SOH;
+	e->out[1] = pr->size_lsb;
+	e->out[2] = pr->size_msb;
+	e->outcount = 3;
 
 	printf("SOH\n");
-	util_write(o_buf, 3, fd);
+
 }
 
 
@@ -158,7 +158,7 @@ void handle_boot_package(event_t *e) {
 		break;
 	case STX:
 		printf("\n\n\nSTX\n");
-		send_size(e->fd);
+		send_size(e);
 		break;
 	case ETX:
 		printf("ETX\n");

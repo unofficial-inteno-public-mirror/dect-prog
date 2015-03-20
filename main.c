@@ -23,12 +23,14 @@ int main(void) {
 	struct epoll_event ev, events[MAX_EVENTS];
 	int state = BOOT_STATE;
 	int epoll_fd, nfds, i, count;
-	uint8_t buf[BUF_SIZE];
+	uint8_t inbuf[BUF_SIZE];
+	uint8_t outbuf[BUF_SIZE];
 	void (*state_event_handler)(event_t *e);
 	int dect_fd;
 	event_t event;
 	event_t *e = &event;
-	e->in = buf;
+	e->in = inbuf;
+	e->out = outbuf;
 
 
 	epoll_fd = epoll_create(10);
@@ -71,6 +73,11 @@ int main(void) {
 				/* Dispatch to current event handler */
 				state_event_handler = state_get_handler();
 				state_event_handler(e);
+
+				/* Write reply if there is one */
+				if (e->outcount > 0) {
+					util_write(e->out, e->outcount, e->fd);
+				}
 			}
 		}
 		
