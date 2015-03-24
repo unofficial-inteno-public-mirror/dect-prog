@@ -112,7 +112,7 @@ static void send_preloader(event_t *e) {
 
 static void send_ack(event_t *e) {
   
-	e->out[0] = SOH;
+	e->out[0] = ACK;
 	e->outcount = 1;
 }
 
