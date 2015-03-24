@@ -30,19 +30,19 @@
 
 #define BUF_SIZE 500
 
-static struct bin_img preloader;
-static struct bin_img *pr = &preloader;
+static struct bin_img flashloader;
+static struct bin_img *pr = &flashloader;
 
 
 
 
 
-static void read_preloader(void) {
+static void read_flashloader(void) {
 
 	int fd, size, ret, sz_ht;
 	struct stat s;
 
-	fd = open("preloader", O_RDONLY);
+	fd = open("flashloader", O_RDONLY);
 	if (fd == -1) {
 		perror("open");
 		exit(EXIT_FAILURE);
@@ -104,7 +104,7 @@ static void send_size(event_t *e) {
 }
 
 
-static void send_preloader(event_t *e) {
+static void send_flashloader(event_t *e) {
   
 	memcpy(e->out, pr->img, pr->size);
 	e->outcount = pr->size;
@@ -118,51 +118,25 @@ static void send_ack(event_t *e) {
 
 
 
-void init_boot_state(int dect_fd) {
+void init_preloader_state(int dect_fd) {
 	
-	printf("BOOT_STATE\n");
+	printf("PRELOADER_STATE\n");
 
-	read_preloader();
+	read_flashloader();
 	calculate_checksum();
 
 	tty_set_raw(dect_fd);
-	tty_set_baud(dect_fd, B19200);
+	tty_set_baud(dect_fd, B9600);
 }
 
 
-void handle_boot_package(event_t *e) {
+void handle_preloader_package(event_t *e) {
 
 	
 	switch (e->in[0]) {
 
-	case SOH:
-		printf("SOH\n");
-		break;
-	case STX:
-		printf("\n\n\nSTX\n");
-		send_size(e);
-		break;
-	case ETX:
-		printf("ETX\n");
-		break;
-	case ACK:
-		printf("ACK\n");
-		send_preloader(e);
-		break;
-	case NACK:
-		printf("NACK\n\n");
-		break;
 	default:
-		if (e->in[0] == pr->checksum) {
-			printf("Checksum ok!\n");
-			send_ack(e);
-			
-			/* make this prettier */
-			state_add_handler(preloader_state, e->fd);
-			state_transition(PRELOADER_STATE);
-		} else {
-			printf("Unknown boot packet: %x\n", e->in[0]);
-		}
+		printf("Unknown boot packet: %x\n", e->in[0]);
 		break;
 	}
 
@@ -172,10 +146,10 @@ void handle_boot_package(event_t *e) {
 
 
 
-struct state_handler boot_handler = {
-	.state = BOOT_STATE,
-	.init_state = init_boot_state,
-	.event_handler = handle_boot_package,
+struct state_handler preloader_handler = {
+	.state = PRELOADER_STATE,
+	.init_state = init_preloader_state,
+	.event_handler = handle_preloader_package,
 };
 
-struct state_handler * boot_state = &boot_handler;
+struct state_handler * preloader_state = &preloader_handler;
