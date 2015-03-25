@@ -27,6 +27,10 @@
 #include "preloader.h"
 
 
+static uint8_t FlashLoader441[] =
+	{
+#include "FlashLoader441.csv"
+	};
 
 
 #define BUF_SIZE 500
@@ -72,33 +76,14 @@ static void read_flashloader(void) {
 	int fd, size, ret, sz_ht;
 	struct stat s;
 
-	fd = open("flashloader", O_RDONLY);
-	if (fd == -1) {
-		perror("open");
-		exit(EXIT_FAILURE);
-	}
-
-	fstat(fd, &s);
   
-	pr->size = s.st_size;
+	pr->size = sizeof(FlashLoader441);
 	pr->size_msb = (uint8_t) (pr->size >> 8);
 	pr->size_lsb = (uint8_t) pr->size;
 
 	printf("size: %d\n", pr->size);
-	printf("size_msb: %d\n", pr->size_msb);
-	printf("size_msb_x: %x\n", pr->size_msb);
-	printf("size_lsb: %d\n", pr->size_lsb);
-	printf("size_lsb_x: %x\n", pr->size_lsb);
-  
 	pr->img = malloc(pr->size);
-  
-	ret = read(fd, pr->img, pr->size);
-	if (ret == -1) {
-		perror("read");
-		exit(EXIT_FAILURE);
-	}
-
-	close(fd);
+	memcpy(pr->img, FlashLoader441, pr->size);
 }
 
 
@@ -122,22 +107,25 @@ static void calculate_checksum(void) {
 
 static void send_size(event_t *e) {
 
+	uint8_t c[2];
 
 	/* Reply */
-	e->out[0] = SOH;
-	e->out[1] = pr->size_lsb;
-	e->out[2] = pr->size_msb;
-	e->outcount = 3;
+	c[0] = pr->size_msb;
+	c[1] = pr->size_lsb;
 
-	printf("SOH\n");
-
+	util_dump(c, 2, "[WRITE]");
+	write(e->fd, c, 2);
 }
 
 
 static void send_flashloader(event_t *e) {
   
-	memcpy(e->out, pr->img, pr->size);
-	e->outcount = pr->size;
+	/* memcpy(e->out, pr->img, pr->size); */
+	/* e->outcount = pr->size; */
+
+	util_dump(pr->img, pr->size, "[WRITE]");
+	write(e->fd, pr->img, pr->size);
+
 }
 
 static void send_start(event_t *e) {
@@ -170,6 +158,9 @@ void init_preloader_state(int dect_fd) {
 	
 	printf("PRELOADER_STATE\n");
 
+	read_flashloader();
+	calculate_checksum();
+
 	tty_set_baud(dect_fd, B9600);
 
 	util_dump(&c, 1, "[WRITE]");
@@ -189,10 +180,21 @@ void handle_preloader_package(event_t *e) {
 		
 	case PRELOADER_NEW_BAUDRATE_READY:
 		printf("PRELOADER_NEW_BAUDRATE_READY\n");
+		send_size(e);
+		usleep(100*100);
+		send_flashloader(e);
 		break;
 
 	default:
-		printf("Unknown preloader packet: %x\n", e->in[0]);
+		if (e->in[0] == pr->checksum) {
+			printf("Checksum ok!\n");
+			
+			/* make this prettier */
+			/* state_add_handler(flasloader_state, e->fd); */
+			/* state_transition(FLASHLOADER_STATE); */
+		} else {
+			printf("Unknown preloader packet: %x\n", e->in[0]);
+		}
 		break;
 	}
 
