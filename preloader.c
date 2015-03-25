@@ -31,6 +31,7 @@
 
 #define BUF_SIZE 500
 
+int file;
 static struct bin_img flashloader;
 static struct bin_img *pr = &flashloader;
 
@@ -148,28 +149,56 @@ static void send_start(event_t *e) {
 
 
 static void set_baudrate(event_t *e) {
+
+	/* e->out[0] = PRELOADER_START; */
+	/* e->out[1] = PRELOADER_BAUD_115200; */
+	/* //	e->out[2] = PRELOADER_NEW_BAUDRATE; */
+	/* e->outcount = 2; */
+
+	uint8_t c[2];
+
+	c[0] = PRELOADER_START;
+	c[1] = PRELOADER_BAUD_115200;
 	
-	e->out[0] = PRELOADER_BAUD_115200;
-	e->out[1] = PRELOADER_NEW_BAUDRATE;
-	e->outcount = 2;
+	util_dump(c, 2, "[WRITE]");
+	write(file, c, 2);
+
+	tty_set_baud(file, B115200);
+
+	c[0] = PRELOADER_NEW_BAUDRATE;
+	util_dump(c, 1, "[WRITE]");
+	write(file, c, 1);
+
 }
 
 
 void init_preloader_state(int dect_fd) {
 	
 	printf("PRELOADER_STATE\n");
-	uint8_t c = 1;
+	uint8_t c;
+	int i;
 
-	read_flashloader();
-	calculate_checksum();
-
+	/* write ack */
+	c = 6;
 	util_dump(&c, 1, "[WRITE]");
 	write(dect_fd, &c, 1);
+	
+	file = dect_fd;
+	/* read_flashloader(); */
+	/* calculate_checksum(); */
 
 	/* tty_set_raw(dect_fd); */
-	/* tty_set_baud(dect_fd, B9600); */
-	
+	//	tty_set_baud(dect_fd, B9600);
 
+	c = 1;
+
+	/* for (i = 0; i < 5; i++) { */
+	/* usleep(200); */
+	
+	/* util_dump(&c, 1, "[WRITE]"); */
+	/* write(dect_fd, &c, 1); */
+	/* } */
+	
 }
 
 

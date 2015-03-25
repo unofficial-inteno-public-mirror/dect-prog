@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdio.h>
 
 #include "error.h"
 
@@ -35,6 +36,8 @@ int tty_set_baud(int fd, int baud)
 	struct termios tp;
 	speed_t rate;
 
+	printf("SET_BAUD: %d\n", baud);
+
 	if (tcgetattr(fd, &tp) == -1)
 		exit_failure("tcgetattr");
 	
@@ -42,6 +45,7 @@ int tty_set_baud(int fd, int baud)
 		exit_failure("cfsetospeed");
 
 	if (tcsetattr(fd, TCSAFLUSH, &tp) == -1)
+	//	if (tcsetattr(fd, TCSANOW, &tp) == -1)
 		exit_failure("tcsetattr");
 }
 
