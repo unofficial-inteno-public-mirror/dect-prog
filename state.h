@@ -28,4 +28,5 @@ void state_add_handler(struct state_handler *s, int fd);
 void * state_get_handler(void);
 
 extern struct state_handler * preloader_state;
+extern struct state_handler * flashloader_state;
 

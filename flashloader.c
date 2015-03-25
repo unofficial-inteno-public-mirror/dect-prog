@@ -27,12 +27,6 @@
 #include "preloader.h"
 
 
-static uint8_t FlashLoader441[] =
-	{
-#include "FlashLoader441.csv"
-	};
-
-
 #define BUF_SIZE 500
 
 static struct bin_img flashloader;
@@ -73,17 +67,8 @@ static struct bin_img *pr = &flashloader;
 
 static void read_flashloader(void) {
 
-	int fd, size, ret, sz_ht;
-	struct stat s;
 
   
-	pr->size = sizeof(FlashLoader441);
-	pr->size_msb = (uint8_t) (pr->size >> 8);
-	pr->size_lsb = (uint8_t) pr->size;
-
-	printf("size: %d\n", pr->size);
-	pr->img = malloc(pr->size);
-	memcpy(pr->img, FlashLoader441, pr->size);
 }
 
 
@@ -135,66 +120,25 @@ static void send_start(event_t *e) {
 }
 
 
-static void set_baudrate(event_t *e) {
 
-	uint8_t c[2];
 
-	c[0] = PRELOADER_BAUD_921600;
+void init_flashloader_state(int dect_fd) {
 	
-	util_dump(c, 1, "[WRITE]");
-	write(e->fd, c, 1);
+	printf("FLASHLOADER_STATE\n");
 
-	tty_set_baud(e->fd, B921600);
-	
-	c[0] = PRELOADER_NEW_BAUDRATE;
-	util_dump(c, 1, "[WRITE]");
-	write(e->fd, c, 1);
+	/* read_firmware(); */
+	/* calculate_checksum(); */
+
 }
 
 
-void init_preloader_state(int dect_fd) {
-	
-	uint8_t c = PRELOADER_START;
-	
-	printf("PRELOADER_STATE\n");
-
-	read_flashloader();
-	calculate_checksum();
-
-	tty_set_baud(dect_fd, B9600);
-
-	util_dump(&c, 1, "[WRITE]");
-	write(dect_fd, &c, 1);
-}
-
-
-void handle_preloader_package(event_t *e) {
+void handle_flashloader_package(event_t *e) {
 
 	
 	switch (e->in[0]) {
 	       
-	case PRELOADER_READY:
-		printf("PRELOADER_READY\n");
-		set_baudrate(e);
-		break;
-		
-	case PRELOADER_NEW_BAUDRATE_READY:
-		printf("PRELOADER_NEW_BAUDRATE_READY\n");
-		send_size(e);
-		usleep(100*100);
-		send_flashloader(e);
-		break;
-
 	default:
-		if (e->in[0] == pr->checksum) {
-			printf("Checksum ok!\n");
-			
-			/* make this prettier */
-			state_add_handler(flashloader_state, e->fd);
-			state_transition(FLASHLOADER_STATE);
-		} else {
-			printf("Unknown preloader packet: %x\n", e->in[0]);
-		}
+		printf("Unknown flashloader packet: %x\n", e->in[0]);
 		break;
 	}
 
@@ -204,10 +148,10 @@ void handle_preloader_package(event_t *e) {
 
 
 
-struct state_handler preloader_handler = {
-	.state = PRELOADER_STATE,
-	.init_state = init_preloader_state,
-	.event_handler = handle_preloader_package,
+struct state_handler flashloader_handler = {
+	.state = FLASHLOADER_STATE,
+	.init_state = init_flashloader_state,
+	.event_handler = handle_flashloader_package,
 };
 
-struct state_handler * preloader_state = &preloader_handler;
+struct state_handler * flashloader_state = &flashloader_handler;
