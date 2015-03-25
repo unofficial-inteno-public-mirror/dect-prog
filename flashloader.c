@@ -119,13 +119,30 @@ static void send_start(event_t *e) {
 	e->outcount = 1;
 }
 
+static void sw_version_req(int fd) {
+  
+	uint8_t c[10];
+
+	c[0] = 0x46;
+	c[1] = 0x01;
+	c[2] = 0x00;
+	c[3] = 0x0d;
+	c[4] = 0xad;
+	c[5] = 0xd1;
+	
+	util_dump(c, 6, "[WRITE]");
+	write(fd, c, 6);
+}
+
 
 
 
 void init_flashloader_state(int dect_fd) {
 	
 	printf("FLASHLOADER_STATE\n");
-
+	
+	usleep(300*1000);
+	sw_version_req(dect_fd);
 	/* read_firmware(); */
 	/* calculate_checksum(); */
 
