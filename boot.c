@@ -46,35 +46,16 @@ static void read_preloader(void) {
 	int fd, size, ret, sz_ht;
 	struct stat s;
 
-	/* fd = open("preloader", O_RDONLY); */
-	/* if (fd == -1) { */
-	/* 	perror("open"); */
-	/* 	exit(EXIT_FAILURE); */
-	/* } */
-
-	/* fstat(fd, &s); */
-  
 	pr->size = sizeof(PreBootPrgm441_20MHz);
 	pr->size_msb = (uint8_t) (pr->size >> 8);
 	pr->size_lsb = (uint8_t) pr->size;
 
 	printf("size: %d\n", pr->size);
-	printf("size_msb: %d\n", pr->size_msb);
-	printf("size_msb_x: %x\n", pr->size_msb);
-	printf("size_lsb: %d\n", pr->size_lsb);
-	printf("size_lsb_x: %x\n", pr->size_lsb);
   
 	pr->img = malloc(pr->size);
   
-	/* ret = read(fd, pr->img, pr->size); */
-	/* if (ret == -1) { */
-	/* 	perror("read"); */
-	/* 	exit(EXIT_FAILURE); */
-	/* } */
-
 	memcpy(pr->img, PreBootPrgm441_20MHz, pr->size);
 
-	//close(fd);
 }
 
 
