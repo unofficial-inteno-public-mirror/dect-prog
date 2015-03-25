@@ -36,7 +36,9 @@ int tty_set_baud(int fd, int baud)
 	struct termios tp;
 	speed_t rate;
 
-	printf("SET_BAUD: %d\n", baud);
+	printf("SET_BAUD\n");
+
+	usleep(300*1000);
 
 	if (tcgetattr(fd, &tp) == -1)
 		exit_failure("tcgetattr");
@@ -44,8 +46,10 @@ int tty_set_baud(int fd, int baud)
 	if (cfsetospeed(&tp, baud) == -1)
 		exit_failure("cfsetospeed");
 
-	if (tcsetattr(fd, TCSADRAIN, &tp) == -1)
+	if (tcsetattr(fd, TCSAFLUSH, &tp) == -1)
 		exit_failure("tcsetattr");
+
+	usleep(300*1000);
 }
 
 

@@ -149,26 +149,18 @@ static void send_start(event_t *e) {
 
 static void set_baudrate(event_t *e) {
 
-	/* e->out[0] = PRELOADER_START; */
-	/* e->out[1] = PRELOADER_BAUD_115200; */
-	/* //	e->out[2] = PRELOADER_NEW_BAUDRATE; */
-	/* e->outcount = 2; */
-
 	uint8_t c[2];
 
-	c[0] = PRELOADER_BAUD_115200;
+	c[0] = PRELOADER_BAUD_921600;
 	
 	util_dump(c, 1, "[WRITE]");
 	write(e->fd, c, 1);
 
-	usleep(300*1000);
-	tty_set_baud(e->fd, B115200);
-	usleep(300*1000);
+	tty_set_baud(e->fd, B921600);
 	
 	c[0] = PRELOADER_NEW_BAUDRATE;
 	util_dump(c, 1, "[WRITE]");
 	write(e->fd, c, 1);
-
 }
 
 
@@ -178,22 +170,10 @@ void init_preloader_state(int dect_fd) {
 	
 	printf("PRELOADER_STATE\n");
 
-	/* /\* write ack *\/ */
-	/* c[0] = 6; */
-	/* util_dump(c, 1, "[WRITE]"); */
-	/* write(dect_fd, c, 1); */
-	
-	/* read_flashloader(); */
-	/* calculate_checksum(); */
-
-	/* tty_set_raw(dect_fd); */
-	usleep(300*1000);
 	tty_set_baud(dect_fd, B9600);
-
 
 	util_dump(&c, 1, "[WRITE]");
 	write(dect_fd, &c, 1);
-	
 }
 
 
