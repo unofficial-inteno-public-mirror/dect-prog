@@ -117,9 +117,13 @@ static void send_preloader(event_t *e) {
 }
 
 static void send_ack(event_t *e) {
-  
-	e->out[0] = ACK;
-	e->outcount = 1;
+
+	uint8_t c[3];
+
+	c[0] = ACK;
+
+	util_dump(c, 1, "[WRITE]");
+	write(e->fd, c, 1);
 }
 
 
@@ -145,7 +149,7 @@ void handle_boot_package(event_t *e) {
 		printf("SOH\n");
 		break;
 	case STX:
-		printf("\n\n\nSTX\n");
+		printf("STX\n");
 		send_size(e);
 		break;
 	case ETX:
@@ -161,7 +165,9 @@ void handle_boot_package(event_t *e) {
 	default:
 		if (e->in[0] == pr->checksum) {
 			printf("Checksum ok!\n");
-		
+			
+			send_ack(e);
+
 			/* make this prettier */
 			state_add_handler(preloader_state, e->fd);
 			state_transition(PRELOADER_STATE);

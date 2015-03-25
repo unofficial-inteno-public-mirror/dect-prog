@@ -44,8 +44,7 @@ int tty_set_baud(int fd, int baud)
 	if (cfsetospeed(&tp, baud) == -1)
 		exit_failure("cfsetospeed");
 
-	if (tcsetattr(fd, TCSAFLUSH, &tp) == -1)
-	//	if (tcsetattr(fd, TCSANOW, &tp) == -1)
+	if (tcsetattr(fd, TCSADRAIN, &tp) == -1)
 		exit_failure("tcsetattr");
 }
 

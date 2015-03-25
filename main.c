@@ -16,7 +16,7 @@
 
 
 #define MAX_EVENTS 10
-#define BUF_SIZE 5000
+#define BUF_SIZE 50000
 
 
 int main(void) {
@@ -43,8 +43,7 @@ int main(void) {
 	if (dect_fd == -1) {
 		exit_failure("open\n");
 	}
-
-
+	
 	ev.events = EPOLLIN;
 	ev.data.fd = dect_fd;
 
