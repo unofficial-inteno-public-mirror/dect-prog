@@ -24,6 +24,7 @@
 #include "state.h"
 #include "boot.h"
 #include "util.h"
+#include "preloader.h"
 
 
 
@@ -33,6 +34,35 @@
 static struct bin_img flashloader;
 static struct bin_img *pr = &flashloader;
 
+//--------------------------------------------------------------------------
+//     PC                            TARGET
+//     ==                            ======
+//             PRELOADER_START
+//    --------------------------------->
+//             PRELOADER_READY
+//    <---------------------------------
+//           PRELOADER_BAUD_xxxx
+//    --------------------------------->
+//         PRELOADER_NEW_BAUDRATE
+//    --------------------------------->
+//       PRELOADER_NEW_BAUDRATE_READY
+//    <---------------------------------
+//             msb code length
+//    --------------------------------->
+//            lsb code length
+//    --------------------------------->
+//                 code
+//    --------------------------------->
+//                 ....
+// 			       ....
+//                 code
+//    --------------------------------->
+//                 chk
+//    <---------------------------------
+//
+//     Boot loader down loaded now
+//
+//--------------------------------------------------------------------------
 
 
 
@@ -110,23 +140,36 @@ static void send_flashloader(event_t *e) {
 	e->outcount = pr->size;
 }
 
-static void send_ack(event_t *e) {
+static void send_start(event_t *e) {
   
-	e->out[0] = ACK;
+	e->out[0] = 1;
 	e->outcount = 1;
 }
 
+
+static void set_baudrate(event_t *e) {
+	
+	e->out[0] = PRELOADER_BAUD_115200;
+	e->out[1] = PRELOADER_NEW_BAUDRATE;
+	e->outcount = 2;
+}
 
 
 void init_preloader_state(int dect_fd) {
 	
 	printf("PRELOADER_STATE\n");
+	uint8_t c = 1;
 
 	read_flashloader();
 	calculate_checksum();
 
-	tty_set_raw(dect_fd);
-	tty_set_baud(dect_fd, B9600);
+	util_dump(&c, 1, "[WRITE]");
+	write(dect_fd, &c, 1);
+
+	/* tty_set_raw(dect_fd); */
+	/* tty_set_baud(dect_fd, B9600); */
+	
+
 }
 
 
@@ -134,9 +177,18 @@ void handle_preloader_package(event_t *e) {
 
 	
 	switch (e->in[0]) {
+	       
+	case PRELOADER_READY:
+		printf("PRELOADER_READY\n");
+		set_baudrate(e);
+		break;
+		
+	case PRELOADER_NEW_BAUDRATE_READY:
+		printf("PRELOADER_NEW_BAUDRATE_READY\n");
+		break;
 
 	default:
-		printf("Unknown boot packet: %x\n", e->in[0]);
+		printf("Unknown preloader packet: %x\n", e->in[0]);
 		break;
 	}
 

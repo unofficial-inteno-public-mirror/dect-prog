@@ -26,6 +26,10 @@
 #include "util.h"
 
 
+static uint8_t PreBootPrgm441_20MHz[] =
+	{
+#include "PreLoader441_20MHZ.csv"
+	};
 
 
 #define BUF_SIZE 500
@@ -42,15 +46,15 @@ static void read_preloader(void) {
 	int fd, size, ret, sz_ht;
 	struct stat s;
 
-	fd = open("preloader", O_RDONLY);
-	if (fd == -1) {
-		perror("open");
-		exit(EXIT_FAILURE);
-	}
+	/* fd = open("preloader", O_RDONLY); */
+	/* if (fd == -1) { */
+	/* 	perror("open"); */
+	/* 	exit(EXIT_FAILURE); */
+	/* } */
 
-	fstat(fd, &s);
+	/* fstat(fd, &s); */
   
-	pr->size = s.st_size;
+	pr->size = sizeof(PreBootPrgm441_20MHz);
 	pr->size_msb = (uint8_t) (pr->size >> 8);
 	pr->size_lsb = (uint8_t) pr->size;
 
@@ -62,13 +66,15 @@ static void read_preloader(void) {
   
 	pr->img = malloc(pr->size);
   
-	ret = read(fd, pr->img, pr->size);
-	if (ret == -1) {
-		perror("read");
-		exit(EXIT_FAILURE);
-	}
+	/* ret = read(fd, pr->img, pr->size); */
+	/* if (ret == -1) { */
+	/* 	perror("read"); */
+	/* 	exit(EXIT_FAILURE); */
+	/* } */
 
-	close(fd);
+	memcpy(pr->img, PreBootPrgm441_20MHz, pr->size);
+
+	//close(fd);
 }
 
 
@@ -155,11 +161,11 @@ void handle_boot_package(event_t *e) {
 	default:
 		if (e->in[0] == pr->checksum) {
 			printf("Checksum ok!\n");
-			send_ack(e);
-			
+		
 			/* make this prettier */
 			state_add_handler(preloader_state, e->fd);
 			state_transition(PRELOADER_STATE);
+
 		} else {
 			printf("Unknown boot packet: %x\n", e->in[0]);
 		}
