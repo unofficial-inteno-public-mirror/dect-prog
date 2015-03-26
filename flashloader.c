@@ -18,6 +18,7 @@
 #include <sys/epoll.h>
 #include <termios.h>
 
+
 #include "dect.h"
 #include "tty.h"
 #include "error.h"
@@ -34,6 +35,14 @@
 
 static struct bin_img flashloader;
 static struct bin_img *pr = &flashloader;
+
+enum fl_state {
+	NEW_PACKET,
+};
+
+int fl_state;
+
+uint8_t packetbuf[BUF_SIZE];
 
 //-----------------------------------------------------------------------------
 //   
@@ -85,6 +94,48 @@ static uint8_t * make_tx_packet(uint8_t * tx, void * packet, int data_size) {
   return tx;
 }
 
+
+static int inspect_rx(event_t *e) {
+	
+	uint32_t data_size = 0, i;
+	uint16_t crc = 0, crc_calc = 0;
+	
+	/* Check header */
+	if (e->in[0] =! UART_PACKET_HEADER) {
+		printf("Drop packet: no header\n");
+		return -1;
+	}
+
+	/* Check size */
+	if (e->incount < PACKET_OVER_HEAD) {
+		printf("Drop packet: packet size smaller then PACKET_OVER_HEAD %d < %d\n",
+		       e->incount, PACKET_OVER_HEAD);
+		return -1;
+	}
+
+	/* Do we have a full packet? */
+	data_size = (((uint32_t) e->in[2] << 8) | e->in[1]);
+	if (e->incount < (data_size + PACKET_OVER_HEAD)) {
+		printf("Drop packet: not a full packet incount: %d < packet size: %d\n",
+		       e->incount, data_size + PACKET_OVER_HEAD);
+		return -1;
+	}
+	
+	/* Read packet checksum */
+	crc = (( ((uint16_t) e->in[e->incount - 1]) << 8) | e->in[e->incount - 2]);
+
+	/* Calculate checksum over data portion */
+	for (i = 0; i < data_size; i++) {
+		crc_calc = UpdateCrc(e->in[i + 3], crc_calc);
+	}
+
+	if (crc != crc_calc) {
+		printf("Drop packet: bad packet checksum: %x != %x\n", crc, crc_calc);
+		return -1;
+	}
+
+	return 0;
+}
 
 
 static send_packet(void * data, int data_size, int fd) {
@@ -182,15 +233,31 @@ void init_flashloader_state(int dect_fd) {
 }
 
 
+
+
 void handle_flashloader_package(event_t *e) {
 
 	
-	switch (e->in[0]) {
-	       
-	default:
-		printf("Unknown flashloader packet: %x\n", e->in[0]);
-		break;
+	if (inspect_rx(e) < 0) {
+		printf("dropped packet\n");
+	} else {
+		printf("packet ok\n");
 	}
+
+
+	/* if (fl_state == NEW_PACKET) { */
+		
+	/* 	/\* Try to read header *\/ */
+		
+		
+	/* } */
+	
+	/* switch (e->in[0]) { */
+	       
+	/* default: */
+	/* 	printf("Unknown flashloader packet: %x\n", e->in[0]); */
+	/* 	break; */
+	/* } */
 
 }
 
