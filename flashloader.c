@@ -26,43 +26,82 @@
 #include "util.h"
 #include "preloader.h"
 
+#include "MRtxDef.h"
+#include "MailDef.h"
+
 
 #define BUF_SIZE 500
 
 static struct bin_img flashloader;
 static struct bin_img *pr = &flashloader;
 
-//--------------------------------------------------------------------------
-//     PC                            TARGET
-//     ==                            ======
-//             PRELOADER_START
-//    --------------------------------->
-//             PRELOADER_READY
-//    <---------------------------------
-//           PRELOADER_BAUD_xxxx
-//    --------------------------------->
-//         PRELOADER_NEW_BAUDRATE
-//    --------------------------------->
-//       PRELOADER_NEW_BAUDRATE_READY
-//    <---------------------------------
-//             msb code length
-//    --------------------------------->
-//            lsb code length
-//    --------------------------------->
-//                 code
-//    --------------------------------->
-//                 ....
-// 			       ....
-//                 code
-//    --------------------------------->
-//                 chk
-//    <---------------------------------
+//-----------------------------------------------------------------------------
+//   
+//   Packet format
+//   =============
 //
-//     Boot loader down loaded now
-//
-//--------------------------------------------------------------------------
+//  +-----+----------------- 
+//  | 0   | Header
+//  +-----+----------------- 
+//  | 1   | Length lsb          n=Length
+//  +-----+----------------- 
+//  | 2   | Length msb
+//  +-----+----------------- 
+//  | 3   | Payload 1
+//  +-----+----------------- 
+//  | .   | ...
+//  +-----+----------------- 
+//  | .   | ... 
+//  +-----+----------------- 
+//  | 2+n | Payload n
+//  +-----+----------------- 
+//  | 3+n | crc lsb
+//  +-----+----------------- 
+//  | 4+n | crc msb
+//  +-----+----------------- 
+//   
+//   
+//-----------------------------------------------------------------------------
 
 
+static uint8_t * make_tx_packet(uint8_t * tx, void * packet, int data_size) {
+  
+  uint8_t * data = (uint8_t *) packet;
+  int i;
+  uint16_t crc = 0;
+  
+  tx[0] = UART_PACKET_HEADER;
+  tx[1] = (uint8_t) data_size;
+  tx[2] = (uint8_t) data_size >> 8;
+  
+  for (i=0; i<data_size; i++) {
+    crc = UpdateCrc(data[i], crc);
+    tx[3 + i] = data[i];
+  }
+  
+  tx[3 + data_size] = (uint8_t) crc;
+  tx[4 + data_size] = (uint8_t) (crc >> 8);
+  
+  return tx;
+}
+
+
+
+static send_packet(void * data, int data_size, int fd) {
+
+  int tx_size = data_size + PACKET_OVER_HEAD;
+  uint8_t * tx = malloc(tx_size);
+  
+  make_tx_packet(tx, data, data_size);
+  util_dump(tx, tx_size, "[WRITE]");
+  write(fd, tx, tx_size);
+  free(tx);
+}
+
+
+static void get_sw_version(void) {
+  
+}
 
 
 static void read_flashloader(void) {
@@ -121,17 +160,11 @@ static void send_start(event_t *e) {
 
 static void sw_version_req(int fd) {
   
-	uint8_t c[10];
-
-	c[0] = 0x46;
-	c[1] = 0x01;
-	c[2] = 0x00;
-	c[3] = 0x0d;
-	c[4] = 0xad;
-	c[5] = 0xd1;
-	
-	util_dump(c, 6, "[WRITE]");
-	write(fd, c, 6);
+	SwVersionReqType *r = malloc(sizeof(SwVersionReqType));
+  
+	r->Primitive = READ_SW_VERSION_REQ;
+	send_packet(r, sizeof(SwVersionReqType), fd);
+	free(r);
 }
 
 
