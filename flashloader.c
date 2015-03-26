@@ -219,6 +219,17 @@ static void sw_version_req(int fd) {
 }
 
 
+static void sw_version_cfm(event_t *e) {
+  
+	SwVersionCfmType *p = (SwVersionCfmType *) &e->in[3];
+
+	printf("version: %d\n", p->Version);
+	printf("revision: %d\n", p->Revision);
+	printf("flashloader id: %d\n", p->FlashLoaderId);
+	
+}
+
+
 
 
 void init_flashloader_state(int dect_fd) {
@@ -240,24 +251,20 @@ void handle_flashloader_package(event_t *e) {
 	
 	if (inspect_rx(e) < 0) {
 		printf("dropped packet\n");
-	} else {
-		printf("packet ok\n");
-	}
+	} 
 
-
-	/* if (fl_state == NEW_PACKET) { */
-		
-	/* 	/\* Try to read header *\/ */
-		
-		
-	/* } */
 	
-	/* switch (e->in[0]) { */
-	       
-	/* default: */
-	/* 	printf("Unknown flashloader packet: %x\n", e->in[0]); */
-	/* 	break; */
-	/* } */
+	switch (e->in[3]) {
+
+	case READ_SW_VERSION_CFM:
+		printf("READ_SW_VERSION_CFM\n");
+		sw_version_cfm(e);
+		break;
+		
+	default:
+		printf("Unknown flashloader packet: %x\n", e->in[0]);
+		break;
+	}
 
 }
 
