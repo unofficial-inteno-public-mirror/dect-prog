@@ -44,6 +44,27 @@ int fl_state;
 
 uint8_t packetbuf[BUF_SIZE];
 
+/* CommonFlashMemoryInterfaceType   MyCfi; */
+
+
+ /* case SC14441_EXT_QSPI_FLASH_BMC: */
+ /* { */
+ /* 	 ReadQSPIFlashTypeCfmType  QSPIFlash; */
+ /* 	 ReadQSPiFlashType(InstanceData, &QSPIFlash); */
+ /* 	 Cfi->FlashID          = EXTERNAL_QSPI_FLASH_ID; */
+ /* 	 Cfi->MinBlockSize     = QSPIFlash.SectorSize; */
+ /* 	 Cfi->MemorySize       = DataOptions->Size; */
+ /* 	 Cfi->FlashStartAddress= StartAddress; */
+ /* 	 Cfi->ChipEraseCmd     = 0x10; */
+ /* 	 Cfi->SectorEraseCmd   = 0x30; */
+ /* 	 return(Err); */
+ /* } */
+
+
+
+
+
+
 //-----------------------------------------------------------------------------
 //   
 //   Packet format
@@ -231,6 +252,69 @@ static void sw_version_cfm(event_t *e) {
 
 
 
+static void qspi_flash_type_req(event_t *e) {
+
+	ReadProprietaryDataReqType *r = malloc(sizeof(ReadProprietaryDataReqType));
+  
+	r->Primitive = READ_PROPRIETARY_DATA_REQ;
+	r->RequestID = 0;
+
+	send_packet(r, sizeof(ReadProprietaryDataReqType), e->fd);
+	free(r);
+
+}
+
+
+/* /// Read Proprietary Data QSPI flashtype Confirm                                                                     */
+/* typedef struct */
+/* { */
+/* 	PrimitiveType     Primitive;      /\*!< Primitive *\/ */
+/* 	uint8             RequestID;      /\*!< Request ID *\/ */
+/* 	uint8             MaxFreqSingle;  /\*!< MaxFreqSingle *\/ */
+/* 	uint8             MaxFreqQuad;    /\*!< MaxFreqQuad   *\/ */
+/* 	uint8             Manufacturer;   /\*!< Manufacturer *\/ */
+/* 	uint16            DeviceId;       /\*!< DeviceId      *\/ */
+/* 	uint32            TotalSize;      /\*!< TotalSize     *\/ */
+/* 	uint32            SectorSize;     /\*!< SectorSize    *\/ */
+/* 5 + 2 + 8 = 15
+/* } ReadQSPIFlashTypeCfmType; */
+
+typedef struct __attribute__((__packed__))
+{
+  PrimitiveType     Primitive;      /*!< Primitive */
+  uint8_t           RequestID;      /*!< Request ID */
+  uint8_t           MaxFreqSingle;  /*!< MaxFreqSingle */
+  uint8_t           MaxFreqQuad;    /*!< MaxFreqQuad   */
+  uint8_t           Manufacturer;   /*!< Manufacturer */
+  uint16_t          DeviceId;       /*!< DeviceId      */
+  uint32_t          TotalSize;      /*!< TotalSize     */
+  uint32_t          SectorSize;     /*!< SectorSize    */
+} flash_type_t;
+
+
+
+static void qspi_flash_type_cfm(event_t *e) {
+
+	flash_type_t flash;
+	flash_type_t *f = &flash;  
+	int i;
+
+
+	memcpy(f, &(e->in[3]), sizeof(flash_type_t));
+
+	printf("Primitive: %x\n", f->Primitive);
+	printf("RequestId: %x\n", f->RequestID);
+	printf("MaxFreqSingle: %x\n", f->MaxFreqSingle);
+	printf("MaxFreqQuad: %x\n", f->MaxFreqQuad);
+	printf("Manufacturer: %x\n", f->Manufacturer);
+	printf("DeviceId: %x\n",  f->DeviceId);
+	printf("TotalSize: %x\n", (int) f->TotalSize);
+	printf("SectorSize: %x\n",(int) f->SectorSize);
+
+}
+
+
+
 
 void init_flashloader_state(int dect_fd) {
 	
@@ -259,8 +343,15 @@ void handle_flashloader_package(event_t *e) {
 	case READ_SW_VERSION_CFM:
 		printf("READ_SW_VERSION_CFM\n");
 		sw_version_cfm(e);
+		printf("READ_PROPRIETARY_DATA_REQ\n");
+		qspi_flash_type_req(e);
 		break;
 		
+	case READ_PROPRIETARY_DATA_CFM:
+		printf("READ_PROPRIETARY_DATA_CFM\n");
+		qspi_flash_type_cfm(e);
+		break;
+
 	default:
 		printf("Unknown flashloader packet: %x\n", e->in[0]);
 		break;
