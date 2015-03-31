@@ -208,6 +208,16 @@ static send_packet(void * data, int data_size, int fd) {
   free(tx);
 }
 
+static send_packet_quiet(void * data, int data_size, int fd) {
+
+  int tx_size = data_size + PACKET_OVER_HEAD;
+  uint8_t * tx = malloc(tx_size);
+  
+  make_tx_packet(tx, data, data_size);
+  write(fd, tx, tx_size);
+  free(tx);
+}
+
 
 static void get_sw_version(void) {
   
@@ -377,10 +387,7 @@ static void erase_flash_req(event_t *e, int address) {
 	p->Address = address;
 	p->EraseCommand = SECTOR_ERASE_CMD;
 
-	printf("Address: %x\n", (int) p->Address);
-	printf("EraseCommand: %x\n", (int) p->EraseCommand);
-	
-	send_packet(p, sizeof(erase_flash_req_t), e->fd);
+	send_packet_quiet(p, sizeof(erase_flash_req_t), e->fd);
 	free(p);
 }
 
@@ -388,29 +395,25 @@ static void erase_flash_req(event_t *e, int address) {
 static void flash_erase_cfm(event_t *e) {
 	
 	erase_flash_cfm_t  *p = (erase_flash_cfm_t *) &e->in[3];
+	char c = '.';
 	  
-	printf("Address: %x\n", (int) p->Address);
 	if(p->Confirm == TRUE) {
-		printf("Confirm: TRUE\n");
 		sectors_written++;
 
 		if (sectors_written < sectors) {
 			
 			/* erase next sector */
-			printf("FLASH_ERASE_REQ\n");
+			printf(".");
 			erase_flash_req(e, p->Address + f->SectorSize);
 		} else {
-			printf("flash_erased\n");
+			printf("\nflash_erased\n");
 		}
 			
 
 	} else {
 		/* try again */
-		printf("Confirm: FALSE\n");
-
-		printf("FLASH_ERASE_REQ\n");
+		printf("Flash erase failed. Retrying.\n");
 		erase_flash_req(e, p->Address);
-
 	}
 }
 
@@ -428,6 +431,7 @@ static void erase_flash(event_t *e) {
 	printf("sectors: %d\n", sectors);
 	printf("mod: %d\n", mod);
 
+	printf("Erasing flash\n");
 	/* Erase first sector */
 	sectors_written = 0;
 	erase_flash_req(e, 0);
@@ -483,7 +487,7 @@ void handle_flashloader_package(event_t *e) {
 		break;
 
 	case FLASH_ERASE_CFM:
-		printf("FLASH_ERASE_CFM\n");
+		//printf("FLASH_ERASE_CFM\n");
 		flash_erase_cfm(e);
 		break;
 

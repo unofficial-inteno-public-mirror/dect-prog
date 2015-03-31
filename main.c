@@ -33,6 +33,7 @@ int main(void) {
 	e->in = inbuf;
 	e->out = outbuf;
 
+	setbuf(stdout, NULL);
 
 	epoll_fd = epoll_create(10);
 	if (epoll_fd == -1) {
@@ -68,7 +69,7 @@ int main(void) {
 
 				e->fd = dect_fd;
 				e->incount = read(e->fd, e->in, BUF_SIZE);
-				util_dump(e->in, e->incount, "[READ]");
+				//util_dump(e->in, e->incount, "[READ]");
 				
 				/* Dispatch to current event handler */
 				state_event_handler = state_get_handler();
