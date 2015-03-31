@@ -32,11 +32,44 @@
 
 
 #define BUF_SIZE 500
-
 #define SECTOR_ERASE_CMD 0x30
+
+
+typedef struct __attribute__((__packed__))
+{
+  PrimitiveType     Primitive;      /*!< Primitive */
+  uint8_t           RequestID;      /*!< Request ID */
+  uint8_t           MaxFreqSingle;  /*!< MaxFreqSingle */
+  uint8_t           MaxFreqQuad;    /*!< MaxFreqQuad   */
+  uint8_t           Manufacturer;   /*!< Manufacturer */
+  uint16_t          DeviceId;       /*!< DeviceId      */
+  uint32_t          TotalSize;      /*!< TotalSize     */
+  uint32_t          SectorSize;     /*!< SectorSize    */
+} flash_type_t;
+
+
+typedef struct __attribute__((__packed__))
+{
+  PrimitiveType     Primitive;      /*!< Primitive */
+  uint32_t          Address;        /*!< Memory address  */
+  uint16_t           EraseCommand;   /*!< Erase command Chip/Sector/Block */    
+} erase_flash_req_t;
+
+typedef struct __attribute__((__packed__))
+{
+  PrimitiveType     Primitive;      /*!< Primitive */
+  uint32_t            Address;        /*!< Memory address  */
+  uint8_t          Confirm;        /*!< Confirm TRUE/FALSE */
+} erase_flash_cfm_t;
+
+
 
 static struct bin_img flashloader;
 static struct bin_img *pr = &flashloader;
+
+static flash_type_t flash;
+static flash_type_t *f = &flash;  
+
 
 enum fl_state {
 	NEW_PACKET,
@@ -45,6 +78,8 @@ enum fl_state {
 int fl_state;
 
 uint8_t packetbuf[BUF_SIZE];
+int sectors, mod, sectors_written;
+
 
 /* CommonFlashMemoryInterfaceType   MyCfi; */
 
@@ -268,40 +303,7 @@ static void qspi_flash_type_req(event_t *e) {
 }
 
 
-/* /// Read Proprietary Data QSPI flashtype Confirm                                                                     */
-/* typedef struct */
-/* { */
-/* 	PrimitiveType     Primitive;      /\*!< Primitive *\/ */
-/* 	uint8             RequestID;      /\*!< Request ID *\/ */
-/* 	uint8             MaxFreqSingle;  /\*!< MaxFreqSingle *\/ */
-/* 	uint8             MaxFreqQuad;    /\*!< MaxFreqQuad   *\/ */
-/* 	uint8             Manufacturer;   /\*!< Manufacturer *\/ */
-/* 	uint16            DeviceId;       /\*!< DeviceId      *\/ */
-/* 	uint32            TotalSize;      /\*!< TotalSize     *\/ */
-/* 	uint32            SectorSize;     /\*!< SectorSize    *\/ */
-/* 5 + 2 + 8 = 15
-/* } ReadQSPIFlashTypeCfmType; */
-
-typedef struct __attribute__((__packed__))
-{
-  PrimitiveType     Primitive;      /*!< Primitive */
-  uint8_t           RequestID;      /*!< Request ID */
-  uint8_t           MaxFreqSingle;  /*!< MaxFreqSingle */
-  uint8_t           MaxFreqQuad;    /*!< MaxFreqQuad   */
-  uint8_t           Manufacturer;   /*!< Manufacturer */
-  uint16_t          DeviceId;       /*!< DeviceId      */
-  uint32_t          TotalSize;      /*!< TotalSize     */
-  uint32_t          SectorSize;     /*!< SectorSize    */
-} flash_type_t;
-
-
-
 static void qspi_flash_type_cfm(event_t *e) {
-
-	flash_type_t flash;
-	flash_type_t *f = &flash;  
-	int i;
-
 
 	memcpy(f, &(e->in[3]), sizeof(flash_type_t));
 
@@ -313,34 +315,8 @@ static void qspi_flash_type_cfm(event_t *e) {
 	printf("DeviceId: %x\n",  f->DeviceId);
 	printf("TotalSize: %x\n", (int) f->TotalSize);
 	printf("SectorSize: %x\n",(int) f->SectorSize);
-
+	
 }
-
-
-/*
-   ErrorCodeType Err;
-   uint16     mailLength = sizeof(WriteConfigReqType);
-   MyMailType *MailPtr   = (MyMailType *)Alloc(mailLength);
-   MyMailType *RxMailPtr = NULL;
-
-   MAIL_PTR->WriteConfigReq.Primitive     = WRITE_CONFIG_REQ;
-   MAIL_PTR->WriteConfigReq.FirstProgWord = FirstProgWord;
-   MAIL_PTR->WriteConfigReq.SecondProgWord= SecondProgWord;
-   MAIL_PTR->WriteConfigReq.OffsetAddress = OffsetAddress;
-   MAIL_PTR->WriteConfigReq.Config        = Config;
-
-   Err=DeliverMail(InstanceData, MailPtr, mailLength, &RxMailPtr, QUICK_CONFIRM_TIMEOUT);
-   if (Err==_NO_ERROR)
-   {
-       if ((RX_MAIL_PTR->WriteConfigCfm.Primitive==WRITE_CONFIG_CFM) &&
-           (RX_MAIL_PTR->WriteConfigCfm.Confirm==TRUE))
-
-
-        case SC14441_EXT_QSPI_FLASH_BMC:
-             RETURN_ON_ERROR(ReadChip441ID(InstanceData));
-             Err=WriteConfig(InstanceData, QSPI_FLASH_CONFIG, QSPI_XIP_OFFSET 0xF0000, 0, 0);
-
-*/
 
 
 
@@ -386,35 +362,19 @@ static void read_firmware(void) {
 	printf("Size: 0x%x\n", (int)pr->size);
 	printf("Size: %d\n", (int)pr->size);
 	
-	
-	
 	close(fd);
-	
 }
 
 
-typedef struct __attribute__((__packed__))
-{
-  PrimitiveType     Primitive;      /*!< Primitive */
-  uint32_t          Address;        /*!< Memory address  */
-  uint16_t           EraseCommand;   /*!< Erase command Chip/Sector/Block */    
-} erase_flash_req_t;
-
-typedef struct __attribute__((__packed__))
-{
-  PrimitiveType     Primitive;      /*!< Primitive */
-  uint32_t            Address;        /*!< Memory address  */
-  uint8_t          Confirm;        /*!< Confirm TRUE/FALSE */
-} erase_flash_cfm_t;
 
 
 
-static void erase_flash_req(event_t *e) {
+static void erase_flash_req(event_t *e, int address) {
 	
 	erase_flash_req_t *p = malloc(sizeof(erase_flash_req_t));
 	
 	p->Primitive = FLASH_ERASE_REQ;
-	p->Address = 0;
+	p->Address = address;
 	p->EraseCommand = SECTOR_ERASE_CMD;
 
 	printf("Address: %x\n", (int) p->Address);
@@ -422,7 +382,6 @@ static void erase_flash_req(event_t *e) {
 	
 	send_packet(p, sizeof(erase_flash_req_t), e->fd);
 	free(p);
-	
 }
 
 
@@ -433,12 +392,47 @@ static void flash_erase_cfm(event_t *e) {
 	printf("Address: %x\n", (int) p->Address);
 	if(p->Confirm == TRUE) {
 		printf("Confirm: TRUE\n");
-	} else {
-		printf("Confirm: FALSE\n");
-	}
+		sectors_written++;
 
+		if (sectors_written < sectors) {
+			
+			/* erase next sector */
+			printf("FLASH_ERASE_REQ\n");
+			erase_flash_req(e, p->Address + f->SectorSize);
+		} else {
+			printf("flash_erased\n");
+		}
+			
+
+	} else {
+		/* try again */
+		printf("Confirm: FALSE\n");
+
+		printf("FLASH_ERASE_REQ\n");
+		erase_flash_req(e, p->Address);
+
+	}
 }
 
+
+static void erase_flash(event_t *e) {
+	
+	int mod, i;
+
+	sectors = pr->size / f->SectorSize + 1;
+	mod = pr->size % f->SectorSize;
+
+	printf("image size: %d\n", pr->size);
+	printf("f->SectorSize: %d\n", f->SectorSize);
+
+	printf("sectors: %d\n", sectors);
+	printf("mod: %d\n", mod);
+
+	/* Erase first sector */
+	sectors_written = 0;
+	erase_flash_req(e, 0);
+
+}
 
 
 void init_flashloader_state(int dect_fd) {
@@ -485,7 +479,7 @@ void handle_flashloader_package(event_t *e) {
 		
 		/* Erase flash */
 		printf("FLASH_ERASE_REQ\n");
-		erase_flash_req(e);
+		erase_flash(e);
 		break;
 
 	case FLASH_ERASE_CFM:
