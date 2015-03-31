@@ -33,6 +33,8 @@
 
 #define BUF_SIZE 500
 
+#define SECTOR_ERASE_CMD 0x30
+
 static struct bin_img flashloader;
 static struct bin_img *pr = &flashloader;
 
@@ -92,6 +94,7 @@ uint8_t packetbuf[BUF_SIZE];
 //   
 //   
 //-----------------------------------------------------------------------------
+
 
 
 static uint8_t * make_tx_packet(uint8_t * tx, void * packet, int data_size) {
@@ -314,6 +317,128 @@ static void qspi_flash_type_cfm(event_t *e) {
 }
 
 
+/*
+   ErrorCodeType Err;
+   uint16     mailLength = sizeof(WriteConfigReqType);
+   MyMailType *MailPtr   = (MyMailType *)Alloc(mailLength);
+   MyMailType *RxMailPtr = NULL;
+
+   MAIL_PTR->WriteConfigReq.Primitive     = WRITE_CONFIG_REQ;
+   MAIL_PTR->WriteConfigReq.FirstProgWord = FirstProgWord;
+   MAIL_PTR->WriteConfigReq.SecondProgWord= SecondProgWord;
+   MAIL_PTR->WriteConfigReq.OffsetAddress = OffsetAddress;
+   MAIL_PTR->WriteConfigReq.Config        = Config;
+
+   Err=DeliverMail(InstanceData, MailPtr, mailLength, &RxMailPtr, QUICK_CONFIRM_TIMEOUT);
+   if (Err==_NO_ERROR)
+   {
+       if ((RX_MAIL_PTR->WriteConfigCfm.Primitive==WRITE_CONFIG_CFM) &&
+           (RX_MAIL_PTR->WriteConfigCfm.Confirm==TRUE))
+
+
+        case SC14441_EXT_QSPI_FLASH_BMC:
+             RETURN_ON_ERROR(ReadChip441ID(InstanceData));
+             Err=WriteConfig(InstanceData, QSPI_FLASH_CONFIG, QSPI_XIP_OFFSET 0xF0000, 0, 0);
+
+*/
+
+
+
+static void config_target(event_t *e) {
+	
+	WriteConfigReqType *r = malloc(sizeof(WriteConfigReqType));
+  
+	r->Primitive = WRITE_CONFIG_REQ;
+	r->FirstProgWord = 0;
+	r->SecondProgWord = 0;
+	r->OffsetAddress = 0xf0000;
+	r->Config = QSPI_FLASH_CONFIG;
+
+	send_packet(r, sizeof(WriteConfigReqType), e->fd);
+	free(r);
+}
+
+
+static void write_config_cfm(event_t *e) {
+	
+	 WriteConfigCfmType *p = (WriteConfigCfmType *) &e->in[3];
+	
+	 if(p->Confirm == TRUE) {
+		 printf("Confirm: TRUE\n");
+	 }
+
+}
+
+static void read_firmware(void) {
+	
+	int fd;
+	struct stat s;
+
+	fd = open("target.bin", O_RDONLY);
+	if (fd == -1) {
+		perror("open");
+		exit(EXIT_FAILURE);
+	}
+
+	fstat(fd, &s);
+	pr->size = s.st_size;
+
+	printf("Size: 0x%x\n", (int)pr->size);
+	printf("Size: %d\n", (int)pr->size);
+	
+	
+	
+	close(fd);
+	
+}
+
+
+typedef struct __attribute__((__packed__))
+{
+  PrimitiveType     Primitive;      /*!< Primitive */
+  uint32_t          Address;        /*!< Memory address  */
+  uint16_t           EraseCommand;   /*!< Erase command Chip/Sector/Block */    
+} erase_flash_req_t;
+
+typedef struct __attribute__((__packed__))
+{
+  PrimitiveType     Primitive;      /*!< Primitive */
+  uint32_t            Address;        /*!< Memory address  */
+  uint8_t          Confirm;        /*!< Confirm TRUE/FALSE */
+} erase_flash_cfm_t;
+
+
+
+static void erase_flash_req(event_t *e) {
+	
+	erase_flash_req_t *p = malloc(sizeof(erase_flash_req_t));
+	
+	p->Primitive = FLASH_ERASE_REQ;
+	p->Address = 0;
+	p->EraseCommand = SECTOR_ERASE_CMD;
+
+	printf("Address: %x\n", (int) p->Address);
+	printf("EraseCommand: %x\n", (int) p->EraseCommand);
+	
+	send_packet(p, sizeof(erase_flash_req_t), e->fd);
+	free(p);
+	
+}
+
+
+static void flash_erase_cfm(event_t *e) {
+	
+	erase_flash_cfm_t  *p = (erase_flash_cfm_t *) &e->in[3];
+	  
+	printf("Address: %x\n", (int) p->Address);
+	if(p->Confirm == TRUE) {
+		printf("Confirm: TRUE\n");
+	} else {
+		printf("Confirm: FALSE\n");
+	}
+
+}
+
 
 
 void init_flashloader_state(int dect_fd) {
@@ -322,7 +447,7 @@ void init_flashloader_state(int dect_fd) {
 	
 	usleep(300*1000);
 	sw_version_req(dect_fd);
-	/* read_firmware(); */
+	read_firmware();
 	/* calculate_checksum(); */
 
 }
@@ -343,13 +468,29 @@ void handle_flashloader_package(event_t *e) {
 	case READ_SW_VERSION_CFM:
 		printf("READ_SW_VERSION_CFM\n");
 		sw_version_cfm(e);
+		printf("WRITE_CONFIG_REQ\n");
+		config_target(e);
+		break;
+		
+	case WRITE_CONFIG_CFM:
+		printf("WRITE_CONFIG_CFM\n");
+		write_config_cfm(e);
 		printf("READ_PROPRIETARY_DATA_REQ\n");
 		qspi_flash_type_req(e);
 		break;
-		
+
 	case READ_PROPRIETARY_DATA_CFM:
 		printf("READ_PROPRIETARY_DATA_CFM\n");
 		qspi_flash_type_cfm(e);
+		
+		/* Erase flash */
+		printf("FLASH_ERASE_REQ\n");
+		erase_flash_req(e);
+		break;
+
+	case FLASH_ERASE_CFM:
+		printf("FLASH_ERASE_CFM\n");
+		flash_erase_cfm(e);
 		break;
 
 	default:
