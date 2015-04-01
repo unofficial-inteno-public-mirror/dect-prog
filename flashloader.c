@@ -149,7 +149,7 @@ static uint8_t * make_tx_packet(uint8_t * tx, void * packet, int data_size) {
   
   tx[0] = UART_PACKET_HEADER;
   tx[1] = (uint8_t) data_size;
-  tx[2] = (uint8_t) data_size >> 8;
+  tx[2] = (uint8_t) (data_size >> 8);
   
   for (i=0; i<data_size; i++) {
     crc = UpdateCrc(data[i], crc);
@@ -457,7 +457,7 @@ static void erase_flash(event_t *e) {
 static void prog_flash_req(event_t *e) {
 
 	int i;
-	prog_flash_t * p = malloc(sizeof(prog_flash_t) + 2047);
+	prog_flash_t * p = malloc(sizeof(prog_flash_t) + 2048 - 2);
 
 	p->Primitive = PROG_FLASH_REQ;
 	p->Address = 0;
@@ -469,13 +469,13 @@ static void prog_flash_req(event_t *e) {
 	printf("Length: 0x%x\n", p->Length);
 	printf("Data: ");
 	
-	for (i = 0; i < p->Length; i++) {
-		printf("%04x, ", p->Data[i]);
-	}
-	printf("\n");
-	
+	/* for (i = 0; i < p->Length; i++) { */
+	/* 	printf("%04x, ", p->Data[i]); */
+	/* } */
+	/* printf("\n"); */
+	printf("sizeof(prog_flash_t): %d\n", (int)sizeof(prog_flash_t));
 
-	send_packet_quiet(p, sizeof(prog_flash_t) + 2047, e->fd);
+	send_packet(p, sizeof(prog_flash_t) + 2048 - 2, e->fd);
 	free(p);
 
 }
@@ -534,9 +534,13 @@ void handle_flashloader_package(event_t *e) {
 		flash_erase_cfm(e);
 
 		/* Progam flash */
-		/* printf("FLASH_PROG_REQ\n"); */
-		/* prog_flash_req(e); */
+		printf("FLASH_PROG_REQ\n");
+		prog_flash_req(e);
 
+		break;
+
+	case PROG_FLASH_CFM:
+		printf("FLASH_PROG_CFM\n");
 		break;
 
 	default:

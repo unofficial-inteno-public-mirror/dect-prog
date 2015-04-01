@@ -8,7 +8,7 @@
 void util_dump(unsigned char *buf, int size, char *start) {
 
 	int i, dumpsize;
-	int maxdump = 100;
+	int maxdump = 10000;
 	unsigned char* cdata = (unsigned char*)buf;
 
 	printf("%s", start);
