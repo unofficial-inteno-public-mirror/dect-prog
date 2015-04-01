@@ -481,16 +481,38 @@ static void erase_flash(event_t *e) {
 
 }
 
+static int is_data_zero(uint8_t *data) {
+	
+	int i;
+
+	for (i = 0; i < 2048; i++) {
+		if (data[i] != 0) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
 static void prog_flash_req(event_t *e, int offset) {
 
 	int i;
 	prog_flash_t * p = malloc(sizeof(prog_flash_t) + 2048 - 2);
+	uint8_t *data = pr->img + offset;
+	int of = offset;
+
+	/* Skip data if all zeros */
+	while (is_data_zero(data)) {
+		data += 2048;
+		of += 2048;
+	}
 
 	p->Primitive = PROG_FLASH_REQ;
-	p->Address = offset;
+	p->Address = of;
 	p->Length = 0x400;
 	
-	memcpy(p->Data, pr->img + offset, 0x800);
+
+	
+	memcpy(p->Data, data, 0x800);
 	
 	printf("Address: 0x%x\n", p->Address);
 	printf("Length: 0x%x\n", p->Length);
