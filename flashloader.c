@@ -499,25 +499,30 @@ static void prog_flash_req(event_t *e, int offset) {
 	prog_flash_t * p = malloc(sizeof(prog_flash_t) + 2048 - 2);
 	uint8_t *data = pr->img + offset;
 	int of = offset;
+	int data_size = 2048;
 
 	/* Skip data if all zeros */
 	while (is_data_zero(data)) {
-		data += 2048;
-		of += 2048;
+		data += data_size;
+		of += data_size;
 	}
 
+	if ((of + data_size) > pr->size) {
+		data_size = (pr->size - of);
+		p->Length = data_size / 2;
+		memcpy(p->Data, data, data_size);
+	} else {
+		p->Length = data_size / 2;
+		memcpy(p->Data, data, data_size);
+	}
+	
 	p->Primitive = PROG_FLASH_REQ;
 	p->Address = of;
-	p->Length = 0x400;
-	
-
-	
-	memcpy(p->Data, data, 0x800);
 	
 	printf("Address: 0x%x\n", p->Address);
 	printf("Length: 0x%x\n", p->Length);
 	
-	send_packet(p, sizeof(prog_flash_t) + 2048 - 2, e->fd);
+	send_packet(p, sizeof(prog_flash_t) + data_size - 2, e->fd);
 	free(p);
 
 }
@@ -543,7 +548,7 @@ static void prog_flash_cfm(event_t *e) {
 	if (p->Confirm == TRUE) {
 		printf("TRUE\n");
 		
-		if (p->Address < pr->size) {
+		if ((p->Address + 0x800) < pr->size) {
 			prog_flash_req(e, p->Address + 0x800);
 		} else {
 			printf("done programming\n");
