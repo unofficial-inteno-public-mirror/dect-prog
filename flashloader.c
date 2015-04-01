@@ -481,16 +481,16 @@ static void erase_flash(event_t *e) {
 
 }
 
-static void prog_flash_req(event_t *e) {
+static void prog_flash_req(event_t *e, int offset) {
 
 	int i;
 	prog_flash_t * p = malloc(sizeof(prog_flash_t) + 2048 - 2);
 
 	p->Primitive = PROG_FLASH_REQ;
-	p->Address = 0;
+	p->Address = offset;
 	p->Length = 0x400;
 	
-	memcpy(p->Data, pr->img, 0x800);
+	memcpy(p->Data, pr->img + offset, 0x800);
 	
 	printf("Address: 0x%x\n", p->Address);
 	printf("Length: 0x%x\n", p->Length);
@@ -500,10 +500,19 @@ static void prog_flash_req(event_t *e) {
 
 }
 
+
+static void program_flash(event_t *e) {
+
+	prog_flash_req(e, 0);
+}
+
+
 static void prog_flash_cfm(event_t *e) {
 	
 	prog_flash_cfm_t * p = (prog_flash_cfm_t *) &e->in[3];
 
+
+	printf("FLASH_PROG_REQ\n");
 	printf("Address: 0x%x\n", p->Address);
 	printf("Length: 0x%x\n", p->Length);
 	printf("Confirm: 0x%x\n", p->Confirm);
@@ -511,8 +520,16 @@ static void prog_flash_cfm(event_t *e) {
 	
 	if (p->Confirm == TRUE) {
 		printf("TRUE\n");
+		
+		if (p->Address < pr->size) {
+			prog_flash_req(e, p->Address + 0x800);
+		} else {
+			printf("done programming\n");
+		}
+
 	} else {
 		printf("FALSE\n");
+		prog_flash_req(e, p->Address + 0);
 	}
 	
 	
@@ -572,9 +589,7 @@ void handle_flashloader_package(event_t *e) {
 		flash_erase_cfm(e);
 
 		/* Progam flash */
-		printf("FLASH_PROG_REQ\n");
-		prog_flash_req(e);
-
+		program_flash(e);
 		break;
 
 	case PROG_FLASH_CFM:
