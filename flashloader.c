@@ -97,6 +97,20 @@ typedef struct __attribute__((__packed__))
 } write_config_cfm_t;
 
 
+typedef struct __attribute__((__packed__))
+{
+  PrimitiveType     Primitive;      /*!< Primitive */
+  uint32_t            Address;        /*!< Memory address */
+  uint32_t          Length;         /*!< Length of data */
+} calc_crc32_req_t;
+
+typedef struct __attribute__((__packed__))
+{
+  PrimitiveType     Primitive;      /*!< Primitive */
+  uint32_t            Address;        /*!< Memory address */
+  uint32_t          Length;         /*!< Length of data */
+  uint32_t            Crc32;          /*!< Crc32 */
+} calc_crc32_cfm_t;
 
 static struct bin_img flashloader;
 static struct bin_img *pr = &flashloader;
@@ -556,6 +570,36 @@ static void program_flash(event_t *e) {
 }
 
 
+static void calc_crc32_req(event_t *e) {
+
+	calc_crc32_req_t * p = (calc_crc32_req_t *) malloc(sizeof(calc_crc32_req_t));
+
+	p->Primitive = CALC_CRC32_REQ;
+	p->Address = 0;
+	p->Length = pr->size;
+	
+	printf("CALC_CRC32_REQ\n");
+	printf("p->Address: %x\n", p->Address);
+	printf("p->Length: %x\n", p->Length);
+
+	send_packet(p, sizeof(calc_crc32_req_t), e->fd);
+	free(p);
+
+}
+
+
+static void calc_crc32_cfm(event_t *e) {
+
+	calc_crc32_cfm_t * p = (calc_crc32_cfm_t *) &e->in[3];
+
+	printf("CALC_CRC32_CFM\n");	
+	printf("p->Address: %x\n", p->Address);
+	printf("p->Length: %x\n", p->Length);
+	printf("p->Crc32: %x\n", p->Crc32);
+
+}
+
+
 static void prog_flash_cfm(event_t *e) {
 	
 	prog_flash_cfm_t * p = (prog_flash_cfm_t *) &e->in[3];
@@ -574,6 +618,7 @@ static void prog_flash_cfm(event_t *e) {
 			prog_flash_req(e, p->Address + 0x800);
 		} else {
 			printf("done programming\n");
+			calc_crc32_req(e);
 		}
 
 	} else {
@@ -583,6 +628,9 @@ static void prog_flash_cfm(event_t *e) {
 	
 	
 }
+
+
+
 
 
 void init_flashloader_state(int dect_fd) {
@@ -645,6 +693,11 @@ void handle_flashloader_package(event_t *e) {
 		printf("FLASH_PROG_CFM\n");
 		prog_flash_cfm(e);
 		break;
+
+	case CALC_CRC32_CFM:
+		calc_crc32_cfm(e);
+		break;
+
 
 	default:
 		printf("Unknown flashloader packet: %x\n", e->in[0]);
