@@ -72,6 +72,15 @@ typedef struct __attribute__((__packed__))
   uint16_t          Data[1];        /*!< array of 16 bits data */
 } prog_flash_t;
 
+typedef struct __attribute__((__packed__))
+{
+  PrimitiveType     Primitive;      /*!< Primitive */
+  uint32_t            Address;        /*!< Memory address  */
+  uint16_t          Length;         /*!< Length of data */
+  uint8_t          Confirm;        /*!< Confirm TRUE/FALSE */
+} prog_flash_cfm_t;
+
+
 
 static struct bin_img flashloader;
 static struct bin_img *pr = &flashloader;
@@ -467,17 +476,28 @@ static void prog_flash_req(event_t *e) {
 	
 	printf("Address: 0x%x\n", p->Address);
 	printf("Length: 0x%x\n", p->Length);
-	printf("Data: ");
 	
-	/* for (i = 0; i < p->Length; i++) { */
-	/* 	printf("%04x, ", p->Data[i]); */
-	/* } */
-	/* printf("\n"); */
-	printf("sizeof(prog_flash_t): %d\n", (int)sizeof(prog_flash_t));
-
 	send_packet(p, sizeof(prog_flash_t) + 2048 - 2, e->fd);
 	free(p);
 
+}
+
+static void prog_flash_cfm(event_t *e) {
+	
+	prog_flash_cfm_t * p = (prog_flash_cfm_t *) &e->in[3];
+
+	printf("Address: 0x%x\n", p->Address);
+	printf("Length: 0x%x\n", p->Length);
+	printf("Confirm: 0x%x\n", p->Confirm);
+
+	
+	if (p->Confirm == TRUE) {
+		printf("TRUE\n");
+	} else {
+		printf("FALSE\n");
+	}
+	
+	
 }
 
 
@@ -541,6 +561,7 @@ void handle_flashloader_package(event_t *e) {
 
 	case PROG_FLASH_CFM:
 		printf("FLASH_PROG_CFM\n");
+		prog_flash_cfm(e);
 		break;
 
 	default:
