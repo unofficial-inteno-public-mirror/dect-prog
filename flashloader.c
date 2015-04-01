@@ -80,6 +80,22 @@ typedef struct __attribute__((__packed__))
   uint8_t          Confirm;        /*!< Confirm TRUE/FALSE */
 } prog_flash_cfm_t;
 
+typedef struct __attribute__((__packed__))
+{
+  PrimitiveType     Primitive;      /*!< Primitive */
+  uint32_t              FirstProgWord;  /*!< First Program word */
+  uint32_t              SecondProgWord; /*!< Second Program word  */
+  uint32_t               OffsetAddress;  /*!< Data offset address  */
+  FlashLoaderConfigType Config;         /*!< Configuration word */
+} write_config_req_t;
+
+
+typedef struct __attribute__((__packed__))
+{
+  PrimitiveType     Primitive;      /*!< Primitive */
+  uint8_t             Confirm;        /*!< Confirm TRUE/FALSE */
+} write_config_cfm_t;
+
 
 
 static struct bin_img flashloader;
@@ -350,7 +366,7 @@ static void qspi_flash_type_cfm(event_t *e) {
 
 static void config_target(event_t *e) {
 	
-	WriteConfigReqType *r = malloc(sizeof(WriteConfigReqType));
+	write_config_req_t *r = malloc(sizeof(write_config_req_t));
   
 	r->Primitive = WRITE_CONFIG_REQ;
 	r->FirstProgWord = 0;
@@ -358,18 +374,18 @@ static void config_target(event_t *e) {
 	r->OffsetAddress = 0xf0000;
 	r->Config = QSPI_FLASH_CONFIG;
 
-	send_packet(r, sizeof(WriteConfigReqType), e->fd);
+	send_packet(r, sizeof(write_config_req_t), e->fd);
 	free(r);
 }
 
 
 static void write_config_cfm(event_t *e) {
 	
-	 WriteConfigCfmType *p = (WriteConfigCfmType *) &e->in[3];
+	write_config_cfm_t *p = (write_config_cfm_t *) &e->in[3];
 	
-	 if(p->Confirm == TRUE) {
-		 printf("Confirm: TRUE\n");
-	 }
+	if(p->Confirm == TRUE) {
+		printf("Confirm: TRUE\n");
+	}
 
 }
 
@@ -420,7 +436,9 @@ static void erase_flash_req(event_t *e, int address) {
 static void flash_erase_cfm(event_t *e) {
 	
 	erase_flash_cfm_t  *p = (erase_flash_cfm_t *) &e->in[3];
-	char c = '.';
+	printf("Address: 0x%x\n", p->Address);
+	printf("Confirm: 0x%x\n", p->Confirm);
+	
 	  
 	if(p->Confirm == TRUE) {
 		/* sectors_written++; */
@@ -431,7 +449,7 @@ static void flash_erase_cfm(event_t *e) {
 		/* 	printf("."); */
 		/* 	erase_flash_req(e, p->Address + f->SectorSize); */
 		/* } else { */
-			printf("\nflash_erased\n");
+			printf("flash_erased\n");
 		/* } */
 			
 
