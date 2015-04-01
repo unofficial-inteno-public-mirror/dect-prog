@@ -402,7 +402,20 @@ static void read_firmware(void) {
 
 	fstat(fd, &s);
 	pr->size = s.st_size;
-	pr->img = malloc(pr->size);
+	
+	/* From original FL 
+	Add 3 dummy bytes in end of array in case of not byte access(8bit) but
+	word access(xbit), and hex file exist of odd data bytes. Then
+	set last undefined byte(s) to 0xFF
+	Word access could be 16 bits access or 32bits access therefore 3 extra bytes. */
+	pr->img = malloc(pr->size + 3);
+	
+	/* if Prog size is odd */
+	if (pr->size & 1) {
+		pr->img[pr->size] = 0xff;
+		pr->img[pr->size + 1] = 0xff;
+		pr->img[pr->size + 2] = 0xff;
+	}
 
 	if (read(fd, pr->img, pr->size) < pr->size) {
 		perror("read");
@@ -507,8 +520,17 @@ static void prog_flash_req(event_t *e, int offset) {
 		of += data_size;
 	}
 
+	/* Is the remaining data smaller than max packet size */
 	if ((of + data_size) > pr->size) {
 		data_size = (pr->size - of);
+		
+		/* If data size is odd */
+		if (data_size & 1) {
+			/* We added three bytes to the buffer
+			 when we read the bin file */
+			data_size++;
+		}
+		
 		p->Length = data_size / 2;
 		memcpy(p->Data, data, data_size);
 	} else {
