@@ -31,8 +31,9 @@
 #include "MailDef.h"
 
 
-#define BUF_SIZE 500
+#define BUF_SIZE 5000
 #define SECTOR_ERASE_CMD 0x30
+#define CHIP_ERASE_CMD 0x10
 
 
 typedef struct __attribute__((__packed__))
@@ -62,6 +63,14 @@ typedef struct __attribute__((__packed__))
   uint8_t          Confirm;        /*!< Confirm TRUE/FALSE */
 } erase_flash_cfm_t;
 
+
+typedef struct __attribute__((__packed__))
+{
+  PrimitiveType     Primitive;      /*!< Primitive */
+  uint32_t            Address;        /*!< Memory address */
+  uint16_t          Length;         /*!< Length of data */
+  uint16_t          Data[1];        /*!< array of 16 bits data */
+} prog_flash_t;
 
 
 static struct bin_img flashloader;
@@ -368,6 +377,13 @@ static void read_firmware(void) {
 
 	fstat(fd, &s);
 	pr->size = s.st_size;
+	pr->img = malloc(pr->size);
+
+	if (read(fd, pr->img, pr->size) < pr->size) {
+		perror("read");
+		exit(EXIT_FAILURE);
+	}
+	
 
 	printf("Size: 0x%x\n", (int)pr->size);
 	printf("Size: %d\n", (int)pr->size);
@@ -385,9 +401,9 @@ static void erase_flash_req(event_t *e, int address) {
 	
 	p->Primitive = FLASH_ERASE_REQ;
 	p->Address = address;
-	p->EraseCommand = SECTOR_ERASE_CMD;
+	p->EraseCommand = CHIP_ERASE_CMD;
 
-	send_packet_quiet(p, sizeof(erase_flash_req_t), e->fd);
+	send_packet(p, sizeof(erase_flash_req_t), e->fd);
 	free(p);
 }
 
@@ -398,23 +414,23 @@ static void flash_erase_cfm(event_t *e) {
 	char c = '.';
 	  
 	if(p->Confirm == TRUE) {
-		sectors_written++;
+		/* sectors_written++; */
 
-		if (sectors_written < sectors) {
+		/* if (sectors_written < sectors) { */
 			
-			/* erase next sector */
-			printf(".");
-			erase_flash_req(e, p->Address + f->SectorSize);
-		} else {
+		/* 	/\* erase next sector *\/ */
+		/* 	printf("."); */
+		/* 	erase_flash_req(e, p->Address + f->SectorSize); */
+		/* } else { */
 			printf("\nflash_erased\n");
-		}
+		/* } */
 			
 
-	} else {
-		/* try again */
-		printf("Flash erase failed. Retrying.\n");
-		erase_flash_req(e, p->Address);
-	}
+	} /* else { */
+	/* 	/\* try again *\/ */
+	/* 	printf("Flash erase failed. Retrying.\n"); */
+	/* 	erase_flash_req(e, p->Address); */
+	/* } */
 }
 
 
@@ -438,6 +454,32 @@ static void erase_flash(event_t *e) {
 
 }
 
+static void prog_flash_req(event_t *e) {
+
+	int i;
+	prog_flash_t * p = malloc(sizeof(prog_flash_t) + 2047);
+
+	p->Primitive = PROG_FLASH_REQ;
+	p->Address = 0;
+	p->Length = 0x400;
+	
+	memcpy(p->Data, pr->img, 0x800);
+	
+	printf("Address: 0x%x\n", p->Address);
+	printf("Length: 0x%x\n", p->Length);
+	printf("Data: ");
+	
+	for (i = 0; i < p->Length; i++) {
+		printf("%04x, ", p->Data[i]);
+	}
+	printf("\n");
+	
+
+	send_packet_quiet(p, sizeof(prog_flash_t) + 2047, e->fd);
+	free(p);
+
+}
+
 
 void init_flashloader_state(int dect_fd) {
 	
@@ -455,12 +497,12 @@ void init_flashloader_state(int dect_fd) {
 
 void handle_flashloader_package(event_t *e) {
 
+	util_dump(e->in, e->incount, "[READ]");
 	
 	if (inspect_rx(e) < 0) {
 		printf("dropped packet\n");
 	} 
 
-	
 	switch (e->in[3]) {
 
 	case READ_SW_VERSION_CFM:
@@ -484,11 +526,17 @@ void handle_flashloader_package(event_t *e) {
 		/* Erase flash */
 		printf("FLASH_ERASE_REQ\n");
 		erase_flash(e);
+
 		break;
 
 	case FLASH_ERASE_CFM:
-		//printf("FLASH_ERASE_CFM\n");
+		printf("FLASH_ERASE_CFM\n");
 		flash_erase_cfm(e);
+
+		/* Progam flash */
+		/* printf("FLASH_PROG_REQ\n"); */
+		/* prog_flash_req(e); */
+
 		break;
 
 	default:
