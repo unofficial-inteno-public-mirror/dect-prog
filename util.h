@@ -8,6 +8,6 @@ struct bin_img {
   int size;
   uint8_t size_msb;
   uint8_t size_lsb;
-  uint8_t checksum;
+  uint32_t checksum;
 };
 

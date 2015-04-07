@@ -283,16 +283,14 @@ static void read_flashloader(void) {
 
 static void calculate_checksum(void) {
   
-	uint8_t chk=0;
+	uint32_t crc=0;
 	int i;
 	uint8_t * FlashLoaderCodePtr = pr->img;
 
-	// Calculate Checksum of flash loader
-	for (i=0; i< pr->size; i++) {
-		chk^=FlashLoaderCodePtr[i];
-	}
+	/* Calculate Checksum of flash loader */
+	InitCrc32Table();
+	pr->checksum = CalculateCRC32((uint16 *)pr->img, pr->size);
 
-	pr->checksum = chk;
 	printf("checksum: %x\n", pr->checksum);
 }
 
@@ -598,6 +596,12 @@ static void calc_crc32_cfm(event_t *e) {
 	printf("p->Length: %x\n", p->Length);
 	printf("p->Crc32: %x\n", p->Crc32);
 
+	if (p->Crc32 == pr->checksum) {
+		printf("Checksum (0x%x) ok!\n", p->Crc32);
+	} else {
+		printf("Bad checksum! 0x%x != 0x%x\n", p->Crc32, pr->checksum);
+	}
+
 }
 
 
@@ -641,7 +645,7 @@ void init_flashloader_state(int dect_fd) {
 	usleep(300*1000);
 	sw_version_req(dect_fd);
 	read_firmware();
-	/* calculate_checksum(); */
+	calculate_checksum();
 
 }
 
