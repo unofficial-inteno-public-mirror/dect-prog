@@ -555,17 +555,18 @@ static void prog_flash_req(event_t *e, int offset) {
 	p->Primitive = PROG_FLASH_REQ;
 	p->Address = of;
 	
-	printf("Address: 0x%x\n", p->Address);
-	printf("Length: 0x%x\n", p->Length);
+	/* printf("Address: 0x%x\n", p->Address); */
+	/* printf("Length: 0x%x\n", p->Length); */
 	
-	send_packet(p, sizeof(prog_flash_t) + data_size - 2, e->fd);
+	send_packet_quiet(p, sizeof(prog_flash_t) + data_size - 2, e->fd);
 	free(p);
 
 }
 
 
 static void program_flash(event_t *e) {
-
+	
+	printf("program flash\n");
 	prog_flash_req(e, 0);
 }
 
@@ -605,19 +606,19 @@ static void prog_flash_cfm(event_t *e) {
 	prog_flash_cfm_t * p = (prog_flash_cfm_t *) &e->in[3];
 
 
-	printf("FLASH_PROG_REQ\n");
-	printf("Address: 0x%x\n", p->Address);
-	printf("Length: 0x%x\n", p->Length);
-	printf("Confirm: 0x%x\n", p->Confirm);
+	/* printf("FLASH_PROG_REQ\n"); */
+	/* printf("Address: 0x%x\n", p->Address); */
+	/* printf("Length: 0x%x\n", p->Length); */
+	/* printf("Confirm: 0x%x\n", p->Confirm); */
 
 	
 	if (p->Confirm == TRUE) {
-		printf("TRUE\n");
+		printf(".");
 		
 		if ((p->Address + 0x800) < pr->size) {
 			prog_flash_req(e, p->Address + 0x800);
 		} else {
-			printf("done programming\n");
+			printf("\ndone programming\n");
 			calc_crc32_req(e);
 		}
 
@@ -690,7 +691,6 @@ void handle_flashloader_package(event_t *e) {
 		break;
 
 	case PROG_FLASH_CFM:
-		printf("FLASH_PROG_CFM\n");
 		prog_flash_cfm(e);
 		break;
 
