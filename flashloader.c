@@ -508,12 +508,12 @@ static void erase_flash(event_t *e) {
 
 }
 
-static int is_data_zero(uint8_t *data) {
+static int is_data_ff(uint8_t *data) {
 	
 	int i;
 
 	for (i = 0; i < 2048; i++) {
-		if (data[i] != 0) {
+		if (data[i] != 0xff) {
 			return 0;
 		}
 	}
@@ -529,10 +529,10 @@ static void prog_flash_req(event_t *e, int offset) {
 	int data_size = 2048;
 
 	/* Skip data if all zeros */
-	while (is_data_zero(data)) {
+	while (is_data_ff(data)) {
 		data += data_size;
 		of += data_size;
-	}
+	};
 
 	/* Is the remaining data smaller than max packet size */
 	if ((of + data_size) > pr->size) {
@@ -649,7 +649,7 @@ void init_flashloader_state(int dect_fd) {
 
 void handle_flashloader_package(event_t *e) {
 
-	util_dump(e->in, e->incount, "[READ]");
+	//util_dump(e->in, e->incount, "[READ]");
 	
 	if (inspect_rx(e) < 0) {
 		printf("dropped packet\n");
