@@ -12,6 +12,7 @@
 #include "boot.h"
 #include "state.h"
 #include "util.h"
+#include "prog.h"
 
 
 
@@ -65,10 +66,17 @@ int main(int argc, char * argv[]) {
 
 	/* Initial transition */
 	if (config->mode == BOOT_MODE) {
+
+		/* Program new firmware */
 		state_add_handler(boot_state, dect_fd);
 		state_transition(BOOT_STATE);
+
 	} else if (config->mode == PROG_MODE) {
-		printf("prog\n");
+
+		/* Firmware written, init firmware */
+		state_add_handler(prog_state, dect_fd);
+		state_transition(PROG_STATE);
+
 	} else {
 		err_exit("No known operating mode selected\n");
 	}
