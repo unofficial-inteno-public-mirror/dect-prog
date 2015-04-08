@@ -38,7 +38,7 @@
 #define SUPERVISORY_CONTROL_FRAME ((1 << 7) | (0 << 6))
 
 
-
+#define SAMB 0xc8
 
 static int inspect_rx(event_t *e) {
 	
@@ -84,6 +84,13 @@ static int inspect_rx(event_t *e) {
 
 
 
+static void unnumbered_control_frame(event_t *e) {
+	
+	if (e->in[3] == SAMB) {
+		printf("SAMB\n");
+	}
+}
+
 
 void init_prog_state(int dect_fd) {
 	
@@ -97,16 +104,17 @@ void init_prog_state(int dect_fd) {
 void handle_prog_package(event_t *e) {
 
 	uint8_t header;
-	uint8_t type;
 
 	util_dump(e->in, e->incount, "[READ]");
 
+	/* Drop invalid packets */
 	if (inspect_rx(e) < 0) {
 		printf("dropped packet\n");
 	} 
 	
-	header = e->in[3];
 
+	/* Route packet based on type */
+	header = e->in[3];
 	switch (header & PACKET_TYPE_MASK) {
 		
 	case INFORMATION_FRAME:
@@ -119,6 +127,7 @@ void handle_prog_package(event_t *e) {
 			
 		case UNNUMBERED_CONTROL_FRAME:
 			printf("UNNUMBERED_CONTROL_FRAME\n");
+			unnumbered_control_frame(e);
 			break;
 
 		case SUPERVISORY_CONTROL_FRAME:
@@ -129,7 +138,7 @@ void handle_prog_package(event_t *e) {
 	break;
 
 	default:
-		printf("Unknown packet header: %x\n", type);
+		printf("Unknown packet header: %x\n", header);
 
 	}
 	
