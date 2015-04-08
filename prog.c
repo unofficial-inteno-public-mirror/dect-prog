@@ -37,8 +37,10 @@
 #define UNNUMBERED_CONTROL_FRAME ((1 << 7) | (1 << 6))
 #define SUPERVISORY_CONTROL_FRAME ((1 << 7) | (0 << 6))
 
+#define POLL_FINAL (1 << 3)
+#define SAMB_POLL_SET 0xc8
+#define SAMB_NO_POLL_SET 0xc0
 
-#define SAMB 0xc8
 
 static int inspect_rx(event_t *e) {
 	
@@ -83,11 +85,57 @@ static int inspect_rx(event_t *e) {
 }
 
 
+static uint8_t * make_tx_packet(uint8_t * tx, void * packet, int data_size) {
+  
+  uint8_t * data = (uint8_t *) packet;
+  int i;
+  uint8_t crc = 0;
+  
+  tx[0] = BUSMAIL_PACKET_HEADER;
+  tx[1] = (uint8_t) (data_size >> 8);
+  tx[2] = (uint8_t) data_size;
+
+  /* Calculate checksum over data portion */
+  for (i = 0; i < data_size; i++) {
+	  crc += data[i];
+	  tx[3 + i] = data[i];
+  }
+
+  
+  tx[3 + data_size] = crc;
+
+  
+  return tx;
+}
+
+
+static send_packet(void * data, int data_size, int fd) {
+
+  int tx_size = data_size + BUSMAIL_PACKET_OVER_HEAD;
+  uint8_t * tx = malloc(tx_size);
+  
+  make_tx_packet(tx, data, data_size);
+  util_dump(tx, tx_size, "[WRITE]");
+  write(fd, tx, tx_size);
+  free(tx);
+}
+
+
 
 static void unnumbered_control_frame(event_t *e) {
 	
-	if (e->in[3] == SAMB) {
-		printf("SAMB\n");
+	uint8_t header = e->in[3];
+	uint8_t data;
+	
+	if (header == SAMB_POLL_SET) {
+		printf("SAMB. Reset Rx and Tx counters\n");
+
+		printf("Reply SAMB_NO_POLL_SET. \n");
+		data = SAMB_NO_POLL_SET;
+		send_packet(&data, 1, e->fd);
+		
+	} else {
+		printf("Bad unnumbered control frame\n");
 	}
 }
 
