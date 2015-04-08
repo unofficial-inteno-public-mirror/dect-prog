@@ -29,6 +29,17 @@
 #define BUSMAIL_PACKET_HEADER 0x10
 #define BUSMAIL_PACKET_OVER_HEAD 4
 
+#define PACKET_TYPE_MASK (1 << 7)
+#define INFORMATION_FRAME (0 << 7)
+#define CONTROL_FRAME (1 << 7)
+
+#define CONTROL_FRAME_MASK ((1 << 7) | (1 << 6))
+#define UNNUMBERED_CONTROL_FRAME ((1 << 7) | (1 << 6))
+#define SUPERVISORY_CONTROL_FRAME ((1 << 7) | (0 << 6))
+
+
+
+
 static int inspect_rx(event_t *e) {
 	
 	uint32_t data_size = 0, i;
@@ -85,17 +96,40 @@ void init_prog_state(int dect_fd) {
 
 void handle_prog_package(event_t *e) {
 
+	uint8_t header;
+	uint8_t type;
+
 	util_dump(e->in, e->incount, "[READ]");
 
 	if (inspect_rx(e) < 0) {
 		printf("dropped packet\n");
 	} 
+	
+	header = e->in[3];
 
+	switch (header & PACKET_TYPE_MASK) {
+		
+	case INFORMATION_FRAME:
+		printf("INFORMATION_FRAME\n");
+		break;
 
-	switch (e->in[0]) {
+	case CONTROL_FRAME:
+
+		switch (header & CONTROL_FRAME_MASK) {
+			
+		case UNNUMBERED_CONTROL_FRAME:
+			printf("UNNUMBERED_CONTROL_FRAME\n");
+			break;
+
+		case SUPERVISORY_CONTROL_FRAME:
+			printf("SUPERVISORY_CONTROL_FRAME\n");
+			break;
+		}
+
+	break;
 
 	default:
-		printf("Unknown packet: %x\n", e->in[0]);
+		printf("Unknown packet header: %x\n", type);
 
 	}
 	
