@@ -31,6 +31,11 @@ typedef struct dect_state {
 	int reg_state;
 } dect_state;
 
+enum {
+	PROG_MODE,
+	BOOT_MODE,
+};
+
 
 enum reg_state {
 	DISABLED,

@@ -11,3 +11,8 @@ struct bin_img {
   uint32_t checksum;
 };
 
+
+typedef struct {
+	uint32_t mode;
+} config_t;
+

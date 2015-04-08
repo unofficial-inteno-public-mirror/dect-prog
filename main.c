@@ -19,7 +19,7 @@
 #define BUF_SIZE 50000
 
 
-int main(void) {
+int main(int argc, char * argv[]) {
 	
 	struct epoll_event ev, events[MAX_EVENTS];
 	int state = BOOT_STATE;
@@ -30,11 +30,15 @@ int main(void) {
 	int dect_fd;
 	event_t event;
 	event_t *e = &event;
+	config_t c;
+	config_t *config = &c;
+
 	e->in = inbuf;
 	e->out = outbuf;
 
 	setbuf(stdout, NULL);
 
+	/* Setup input */
 	epoll_fd = epoll_create(10);
 	if (epoll_fd == -1) {
 		exit_failure("epoll_create\n");
@@ -44,7 +48,8 @@ int main(void) {
 	if (dect_fd == -1) {
 		exit_failure("open\n");
 	}
-	
+
+	/* Setup epoll instance */
 	ev.events = EPOLLIN;
 	ev.data.fd = dect_fd;
 
@@ -52,10 +57,22 @@ int main(void) {
 		exit_failure("epoll_ctl\n");
 	}
 	
-	state_add_handler(boot_state, dect_fd);
-	
+
+	/* Check user arguments and init config */
+	if (check_args(argc, argv, config) < 0) {
+		err_exit("Usage: %s <boot | prog>", argv[0]);
+	}
+
 	/* Initial transition */
-	state_transition(BOOT_STATE);
+	if (config->mode == BOOT_MODE) {
+		state_add_handler(boot_state, dect_fd);
+		state_transition(BOOT_STATE);
+	} else if (config->mode == PROG_MODE) {
+		printf("prog\n");
+	} else {
+		err_exit("No known operating mode selected\n");
+	}
+
 
 	for(;;) {
 
