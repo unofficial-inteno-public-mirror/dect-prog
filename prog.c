@@ -152,7 +152,7 @@ void init_prog_state(int dect_fd) {
 	tty_set_baud(dect_fd, B115200);
 
 	/* Init input buffer */
-	buf = buf_new(INBUF_SIZE);
+	buf = buffer_new(500);
 	
 }
 
@@ -164,7 +164,11 @@ void handle_prog_package(event_t *e) {
 	util_dump(e->in, e->incount, "[READ]");
 
 	/* Add input to buffer */
-	
+	if (buffer_add(buf, e->in, e->incount) < 0) {
+		printf("buffer full\n");
+	}
+		
+	buffer_dump(buf);
 	
 	/* Process whole packets in buffer */
 
