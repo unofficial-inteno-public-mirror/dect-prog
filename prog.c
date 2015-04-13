@@ -25,6 +25,7 @@
 #include "boot.h"
 #include "util.h"
 #include "prog.h"
+#include "buffer.h"
 
 #define BUSMAIL_PACKET_HEADER 0x10
 #define BUSMAIL_PACKET_OVER_HEAD 4
@@ -41,6 +42,9 @@
 #define SAMB_POLL_SET 0xc8
 #define SAMB_NO_POLL_SET 0xc0
 
+#define INBUF_SIZE 5000
+
+buffer_t * buf;
 
 static int inspect_rx(event_t *e) {
 	
@@ -146,6 +150,10 @@ void init_prog_state(int dect_fd) {
 
 	tty_set_raw(dect_fd);
 	tty_set_baud(dect_fd, B115200);
+
+	/* Init input buffer */
+	buf = buf_new(INBUF_SIZE);
+	
 }
 
 
@@ -154,6 +162,11 @@ void handle_prog_package(event_t *e) {
 	uint8_t header;
 
 	util_dump(e->in, e->incount, "[READ]");
+
+	/* Add input to buffer */
+	
+	
+	/* Process whole packets in buffer */
 
 	/* Drop invalid packets */
 	if (inspect_rx(e) < 0) {
