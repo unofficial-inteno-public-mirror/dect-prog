@@ -208,7 +208,7 @@ static int inspect_rx(event_t *e) {
 	uint16_t crc = 0, crc_calc = 0;
 	
 	/* Check header */
-	if (e->in[0] =! UART_PACKET_HEADER) {
+	if (e->in[0] != UART_PACKET_HEADER) {
 		printf("Drop packet: no header\n");
 		return -1;
 	}
