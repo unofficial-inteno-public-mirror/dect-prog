@@ -48,7 +48,7 @@ void init_prog_state(int dect_fd) {
 	tty_set_baud(dect_fd, B115200);
 
 	/* Init input buffer */
-	buf = buffer_new(500);
+	buf = buffer_new(50);
 	
 }
 

@@ -41,6 +41,32 @@ int buffer_add(buffer_t * self, uint8_t *input, int count) {
 }
 
 
+int buffer_read(buffer_t * self, uint8_t *buf, int count) {
+
+	/* Only add data if we have enough room in the buffer */
+	if ( self->count + count > self->max) {
+		return -1;
+	}
+
+	memcpy(buf, self->in + self->count, count);
+	
+	return 0;
+}
+
+int buffer_find(buffer_t * self, uint8_t c) {
+	
+	int i;
+
+	/* Do we have a start of frame? */
+        for (i = 0; i < self->count; i++) {
+                if (self->in[i] == c) {
+                        return i;
+                }
+                return -1;
+        }
+
+}
+
 
 int buffer_dump(buffer_t * self) {
 	
