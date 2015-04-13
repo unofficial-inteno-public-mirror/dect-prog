@@ -6,7 +6,7 @@
 
 typedef struct {
 	uint8_t * in;
-	uint8_t * cursor;
+	uint32_t cursor;
 	uint32_t count;
 	uint32_t max;
 } buffer_t;

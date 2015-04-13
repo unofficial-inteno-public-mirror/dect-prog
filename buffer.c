@@ -43,14 +43,15 @@ int buffer_add(buffer_t * self, uint8_t *input, int count) {
 
 int buffer_read(buffer_t * self, uint8_t *buf, int count) {
 
-	/* Only add data if we have enough room in the buffer */
-	if ( self->count + count > self->max) {
+	if ( self->cursor + count > self->max) {
 		return -1;
 	}
 
-	memcpy(buf, self->in + self->count, count);
+	memcpy(buf, self->in + self->cursor, count);
+	self->cursor += count;
 	
-	return 0;
+	
+	return count;
 }
 
 int buffer_find(buffer_t * self, uint8_t c) {
@@ -72,9 +73,17 @@ int buffer_dump(buffer_t * self) {
 	
 	int i;
 
-	printf("[BUFFER: %d] \n", self->count);
+	printf("[BUFFER: count %d\t cursor %d] \n", self->count, self->cursor);
+	printf("[RAW] %d:", self->count);
 	for (i = 0; i < self->count; i++) {
 		printf("%02x ", self->in[i]);
 	}
 	printf("\n");
+
+	printf("[LOGIC] %d:\n", self->count - self->cursor);
+	for (i = 0; i < self->count - self->cursor; i++) {
+		printf("%02x ", self->in[i + self->cursor]);
+	}
+	printf("\n");
+
 }
