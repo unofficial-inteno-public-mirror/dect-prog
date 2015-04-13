@@ -34,11 +34,12 @@ int buffer_add(buffer_t * self, uint8_t *input, int count) {
 		return -1;
 	}
 
-	memcpy(self->in, input, count);
+	memcpy(self->in + self->count, input, count);
 	self->count += count;
-
+	
 	return 0;
 }
+
 
 
 int buffer_dump(buffer_t * self) {
