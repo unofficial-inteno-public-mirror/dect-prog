@@ -87,3 +87,9 @@ int buffer_dump(buffer_t * self) {
 	printf("\n");
 
 }
+
+
+int buffer_size(buffer_t * self) {
+
+	return self->count - self->cursor;
+}

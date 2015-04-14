@@ -67,7 +67,7 @@ void handle_prog_package(event_t *e) {
 		printf("buffer full\n");
 	}
 		
-	buffer_dump(buf);
+	//buffer_dump(buf);
 	
 	/* Process whole packets in buffer */
 	packet_get(p, buf);
