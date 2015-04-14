@@ -172,7 +172,7 @@ int packet_get(packet_t *p, buffer_t *b) {
 
 	/* Calculate checksum over data portion */
 	for (i = 0; i < size; i++) {
-		crc_calc += b->in[i + 3];
+		crc_calc += buf[i + 3];
 	}
 
 	if (crc != crc_calc) {
