@@ -48,7 +48,7 @@ void init_prog_state(int dect_fd) {
 	tty_set_baud(dect_fd, B115200);
 
 	/* Init input buffer */
-	buf = buffer_new(50);
+	buf = buffer_new(500);
 	
 }
 
@@ -59,6 +59,7 @@ void handle_prog_package(event_t *e) {
 	packet_t packet;
 	packet_t *p = &packet;
 	p->fd = e->fd;
+	p->size = 0;
 
 	util_dump(e->in, e->incount, "[READ]");
 
@@ -71,8 +72,9 @@ void handle_prog_package(event_t *e) {
 	
 	/* Process whole packets in buffer */
 	packet_get(p, buf);
-
-	packet_dump(p);
+	
+	if (p->size > 0)
+		packet_dump(p);
 	
 	packet_dispatch(p);
 }

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "packet.h"
 #include "prog.h"
@@ -63,7 +64,7 @@ static send_packet(void * data, int data_size, int fd) {
 
 static void unnumbered_control_frame(packet_t *p) {
 	
-	uint8_t header = p->data[0];
+	uint8_t header = p->data[3];
 	uint8_t data;
 	
 	if (header == SAMB_POLL_SET) {
@@ -163,9 +164,11 @@ int packet_get(packet_t *p, buffer_t *b) {
 	if (BUSMAIL_PACKET_OVER_HEAD + size >= b->count - start) {
 		return -1;
 	}
-
+	
+	buffer_read(b, buf + 3, size + 1);
+	
 	/* Read packet checksum */
-	crc = (( (uint8_t) b->in[start + BUSMAIL_PACKET_OVER_HEAD + size - 1]));
+	crc = (( (uint8_t) buf[start + BUSMAIL_PACKET_OVER_HEAD + size - 1]));
 
 	/* Calculate checksum over data portion */
 	for (i = 0; i < size; i++) {
@@ -177,15 +180,30 @@ int packet_get(packet_t *p, buffer_t *b) {
 		return -1;
 	}
 
-
-	printf("got packet\n");
+	
+	
+	/* p->data = malloc(BUSMAIL_PACKET_OVER_HEAD + size); */
+	/* if (!p->data) { */
+	/* 	exit_failure("malloc\n"); */
+	/* } */
+	
+	memcpy(p->data, buf, BUSMAIL_PACKET_OVER_HEAD + size);
+	p->size = size + BUSMAIL_PACKET_OVER_HEAD;
+	//	packet_dump(p);
+	return 0;
 
 }
 
 
 void packet_dump(packet_t *p) {
+	
+	int i;
 
-
+	printf("[PACKET %d] - ", p->size);
+	for (i = 0; i < p->size; i++) {
+		printf("%02x ", p->data[i]);
+	}
+	printf("\n");
 }
 
 
@@ -200,7 +218,7 @@ void packet_dispatch(packet_t *p) {
 	
 
 	/* Route packet based on type */
-	header = p->data[0];
+	header = p->data[3];
 	switch (header & PACKET_TYPE_MASK) {
 		
 	case INFORMATION_FRAME:
