@@ -64,7 +64,7 @@ static send_packet(void * data, int data_size, int fd) {
 
 static void unnumbered_control_frame(packet_t *p) {
 	
-	uint8_t header = p->data[3];
+	uint8_t header = p->data[0];
 	uint8_t data;
 	
 	if (header == SAMB_POLL_SET) {
@@ -129,8 +129,7 @@ int packet_get(packet_t *p, buffer_t *b) {
 	
 	int i, start, stop, size;
 	uint8_t crc = 0, crc_calc = 0;
-	uint8_t buf[10];
-
+	uint8_t buf[5000];
 
 	/* start = buffer_find(b, BUSMAIL_PACKET_HEADER); */
 	/* if (start < 0) { */
@@ -144,11 +143,6 @@ int packet_get(packet_t *p, buffer_t *b) {
 		}
 	}
 
-	printf("got header %x\n", buf[0]);
-	/* printf("buffer_size: %d\n", buffer_size(b)); */
-	/* buffer_dump(b); */
-	/* return 0; */
-
 	/* Do we have a full header? */
 	if (buffer_size(b) < 2) {
 		return -1;
@@ -157,14 +151,11 @@ int packet_get(packet_t *p, buffer_t *b) {
 
 	/* Packet size */
 	size = (((uint32_t) buf[1] << 8) | buf[2]);
-	printf("size: %d\n", size);
-
-
+	
 	/* Do we have a full packet? */
 	if (BUSMAIL_PACKET_OVER_HEAD + size >= b->count - start) {
 		return -1;
 	}
-	
 	buffer_read(b, buf + 3, size + 1);
 	
 	/* Read packet checksum */
@@ -180,18 +171,11 @@ int packet_get(packet_t *p, buffer_t *b) {
 		return -1;
 	}
 
-	
-	
-	/* p->data = malloc(BUSMAIL_PACKET_OVER_HEAD + size); */
-	/* if (!p->data) { */
-	/* 	exit_failure("malloc\n"); */
-	/* } */
-	
-	memcpy(p->data, buf, BUSMAIL_PACKET_OVER_HEAD + size);
-	p->size = size + BUSMAIL_PACKET_OVER_HEAD;
-	//	packet_dump(p);
-	return 0;
+	/* Copy data portion to packet */
+	memcpy(p->data, buf + 3, size);
+	p->size = size;
 
+	return 0;
 }
 
 
@@ -218,7 +202,7 @@ void packet_dispatch(packet_t *p) {
 	
 
 	/* Route packet based on type */
-	header = p->data[3];
+	header = p->data[0];
 	switch (header & PACKET_TYPE_MASK) {
 		
 	case INFORMATION_FRAME:

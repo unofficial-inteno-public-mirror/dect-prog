@@ -29,22 +29,23 @@ buffer_t * buffer_new(int size) {
 
 int buffer_add(buffer_t * self, uint8_t *input, int count) {
 
-	/* Only add data if we have enough room in the buffer */
+	/* Don't write beyond buffer boundary */
 	if ( self->count + count > self->max) {
-		return -1;
+		count = self->max - self->count;
 	}
 
 	memcpy(self->in + self->count, input, count);
 	self->count += count;
 	
-	return 0;
+	return count;
 }
 
 
 int buffer_read(buffer_t * self, uint8_t *buf, int count) {
 
-	if ( self->cursor + count > self->max) {
-		return -1;
+	/* Don't read beyond data boundary */
+	if ( self->cursor + count > self->count) {
+		count = self->count - self->cursor;
 	}
 
 	memcpy(buf, self->in + self->cursor, count);
@@ -58,9 +59,9 @@ int buffer_find(buffer_t * self, uint8_t c) {
 	
 	int i;
 
-	/* Do we have a start of frame? */
-        for (i = 0; i < self->count; i++) {
-                if (self->in[i] == c) {
+	/* Do we have byte c in buffer? */
+        for (i = 0; i < self->count - self->cursor; i++) {
+                if (self->in[i + self->cursor] == c) {
                         return i;
                 }
                 return -1;

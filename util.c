@@ -10,7 +10,7 @@ void util_dump(unsigned char *buf, int size, char *start) {
 
 	int i, dumpsize;
 	int maxdump = 10000;
-	unsigned char* cdata = (unsigned char*)buf;
+	//unsigned char* cdata = (unsigned char*)buf;
 
 	printf("%s", start);
 	printf("[%04d] - ",size);
@@ -22,7 +22,7 @@ void util_dump(unsigned char *buf, int size, char *start) {
 	}
 
 	for (i=0 ; i<dumpsize ; i++) {
-		printf("%02x ",cdata[i]);
+		printf("%02x ",buf[i]);
 	}
 	printf("\n");
 	
