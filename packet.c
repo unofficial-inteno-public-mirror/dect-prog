@@ -2,13 +2,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <Api/FpGeneral/ApiFpGeneral.h>
+
 #include "packet.h"
 #include "prog.h"
+
 
 
 #define BUSMAIL_PACKET_HEADER 0x10
 #define BUSMAIL_HEADER_SIZE 3
 #define BUSMAIL_PACKET_OVER_HEAD 4
+#define RTX_PROG_ID 0x00
 
 #define PACKET_TYPE_MASK (1 << 7)
 #define INFORMATION_FRAME (0 << 7)
@@ -123,6 +127,26 @@ static int packet_inspect(packet_t *p) {
 }
 
 
+static void information_frame(packet_t *p) {
+
+	busmail_t * m = (busmail_t *) &p->data[0];
+
+	/* Drop unwanted frames */
+	if( m->program_id != RTX_PROG_ID ) {
+		return;
+	}
+
+	packet_dump(p);
+
+	switch (m->mail_header) {
+		
+	case API_FP_RESET_IND:
+		printf("API_FP_RESET_IND\n");
+		break;
+		
+		
+	}
+}
 
 
 int packet_get(packet_t *p, buffer_t *b) {
@@ -193,8 +217,8 @@ void packet_dump(packet_t *p) {
 
 void packet_dispatch(packet_t *p) {
 
-	uint8_t header;
-
+	busmail_t * m = (busmail_t *) &p->data[0];
+	
 	/* Drop invalid packets */
 	/* if (packet_inspect(p) < 0) { */
 	/* 	printf("dropped packet\n"); */
@@ -202,16 +226,16 @@ void packet_dispatch(packet_t *p) {
 	
 
 	/* Route packet based on type */
-	header = p->data[0];
-	switch (header & PACKET_TYPE_MASK) {
+
+	switch (m->frame_header & PACKET_TYPE_MASK) {
 		
 	case INFORMATION_FRAME:
-		printf("INFORMATION_FRAME\n");
+		information_frame(p);
 		break;
 
 	case CONTROL_FRAME:
 
-		switch (header & CONTROL_FRAME_MASK) {
+		switch (m->frame_header & CONTROL_FRAME_MASK) {
 			
 		case UNNUMBERED_CONTROL_FRAME:
 			printf("UNNUMBERED_CONTROL_FRAME\n");
@@ -226,7 +250,7 @@ void packet_dispatch(packet_t *p) {
 	break;
 
 	default:
-		printf("Unknown packet header: %x\n", header);
+		printf("Unknown packet header: %x\n", m->frame_header);
 
 	}
 

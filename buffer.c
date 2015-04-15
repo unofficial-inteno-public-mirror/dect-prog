@@ -27,7 +27,7 @@ buffer_t * buffer_new(int size) {
 }
 
 
-int buffer_add(buffer_t * self, uint8_t *input, int count) {
+int buffer_write(buffer_t * self, uint8_t *input, int count) {
 
 	/* Don't write beyond buffer boundary */
 	if ( self->count + count > self->max) {
@@ -50,7 +50,6 @@ int buffer_read(buffer_t * self, uint8_t *buf, int count) {
 
 	memcpy(buf, self->in + self->cursor, count);
 	self->cursor += count;
-	
 	
 	return count;
 }
