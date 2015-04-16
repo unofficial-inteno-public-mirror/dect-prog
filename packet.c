@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include <Api/FpGeneral/ApiFpGeneral.h>
+#include <RosPrimitiv.h>
 
 #include "packet.h"
 #include "prog.h"
@@ -143,7 +144,10 @@ static void information_frame(packet_t *p) {
 	case API_FP_RESET_IND:
 		printf("API_FP_RESET_IND\n");
 		break;
-		
+
+	case API_SCL_STATUS_IND:
+		printf("API_SCL_STATUS_IND\n");
+		break;
 		
 	}
 }
