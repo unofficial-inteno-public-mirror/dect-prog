@@ -23,6 +23,18 @@
 #define UNNUMBERED_CONTROL_FRAME ((1 << 7) | (1 << 6))
 #define SUPERVISORY_CONTROL_FRAME ((1 << 7) | (0 << 6))
 
+/* Information frame */
+#define TX_SEQ_MASK ((1 << 6) | (1 << 5) | (1 << 4))
+#define TX_SEQ_OFFSET 4
+#define RX_SEQ_MASK  ((1 << 2) | (1 << 1) | (1 << 0))
+#define RX_SEQ_OFFSET 0
+#define PF_MASK ((1 << 3))
+#define PF_OFFSET 3
+
+/* Supervisory control frame */
+
+
+
 #define POLL_FINAL (1 << 3)
 #define SAMB_POLL_SET 0xc8
 #define SAMB_NO_POLL_SET 0xc0
@@ -128,9 +140,12 @@ static int packet_inspect(packet_t *p) {
 }
 
 
+
+
 static void information_frame(packet_t *p) {
 
 	busmail_t * m = (busmail_t *) &p->data[0];
+	uint8_t tx_seq, rx_seq, pf;
 
 	/* Drop unwanted frames */
 	if( m->program_id != RTX_PROG_ID ) {
@@ -138,6 +153,16 @@ static void information_frame(packet_t *p) {
 	}
 
 	packet_dump(p);
+	
+	tx_seq = (m->frame_header & TX_SEQ_MASK) >> TX_SEQ_OFFSET;
+	rx_seq = (m->frame_header & RX_SEQ_MASK) >> RX_SEQ_OFFSET;
+	pf = (m->frame_header & PF_MASK) >> PF_OFFSET;
+
+
+	printf("frame_header: %02x\n", m->frame_header);
+	printf("tx_seq: %d\n", tx_seq);
+	printf("rx_seq: %d\n", rx_seq);
+	printf("pf: %d\n", pf);
 
 	switch (m->mail_header) {
 		
