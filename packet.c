@@ -32,13 +32,21 @@
 #define PF_OFFSET 3
 
 /* Supervisory control frame */
-
+#define SUID_MASK ((1 << 5) | (1 << 4))
+#define SUID_RR   ((0 << 1) | (0 << 0))
+#define SUID_REJ  ((0 << 1) | (1 << 0))
+#define SUID_RNR  ((1 << 1) | (0 << 0))
+#define SUID_OFFSET 4
+#define NO_PF 0
+#define PF 1
 
 
 #define POLL_FINAL (1 << 3)
 #define SAMB_POLL_SET 0xc8
 #define SAMB_NO_POLL_SET 0xc0
 
+uint8_t rx_next;
+uint8_t tx_next;
 
 static uint8_t * make_tx_packet(uint8_t * tx, void * packet, int data_size) {
   
@@ -140,12 +148,54 @@ static int packet_inspect(packet_t *p) {
 }
 
 
+static uint8_t make_supervisory_frame(uint8_t suid, uint8_t pf, uint8_t rx_next) {
+	
+	uint8_t header;
 
+	header = ( (suid << SUID_OFFSET) | (pf << PF_OFFSET) | rx_next );
+
+	return header;
+}
+
+
+static void supervisory_control_frame(packet_t *p) {
+	
+	busmail_t * m = (busmail_t *) &p->data[0];
+	uint8_t rx_seq, pf, suid;
+
+	rx_seq = (m->frame_header & RX_SEQ_MASK) >> RX_SEQ_OFFSET;
+	pf = (m->frame_header & PF_MASK) >> PF_OFFSET;
+	suid = (m->frame_header & SUID_MASK) >> SUID_OFFSET;
+
+	printf("frame_header: %02x\n", m->frame_header);
+
+	
+	printf("suid: ");
+	
+	switch (suid & SUID_MASK) {
+		
+	case SUID_RR:
+		printf("SUID_RR\n");
+		break;
+
+	case SUID_REJ:
+		printf("SUID_REJ\n");
+		break;
+
+	case SUID_RNR:
+		printf("SUID_RNR\n");
+		break;
+	}
+
+	printf("rx_seq: %d\n", rx_seq);
+	printf("pf: %d\n", pf);
+
+}
 
 static void information_frame(packet_t *p) {
 
 	busmail_t * m = (busmail_t *) &p->data[0];
-	uint8_t tx_seq, rx_seq, pf;
+	uint8_t tx_seq, rx_seq, pf, header;
 
 	/* Drop unwanted frames */
 	if( m->program_id != RTX_PROG_ID ) {
@@ -175,6 +225,18 @@ static void information_frame(packet_t *p) {
 		break;
 		
 	}
+
+	if (tx_seq < 7) {
+		rx_next = tx_seq + 1;
+	} else {
+		rx_next = 0;
+	}
+
+	header = make_supervisory_frame(SUID_RR, NO_PF, rx_next);
+	printf("header: %02x\n", header);
+	
+	send_packet(&header, 1, p->fd);
+
 }
 
 
@@ -273,6 +335,7 @@ void packet_dispatch(packet_t *p) {
 
 		case SUPERVISORY_CONTROL_FRAME:
 			printf("SUPERVISORY_CONTROL_FRAME\n");
+			supervisory_control_frame(p);
 			break;
 		}
 
