@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include <Api/FpGeneral/ApiFpGeneral.h>
+#include <Api/FpMm/ApiFpMm.h>
 #include <RosPrimitiv.h>
 
 #include "error.h"
@@ -150,6 +151,8 @@ static int packet_inspect(packet_t *p) {
 }
 
 
+
+
 static uint8_t make_supervisory_frame(uint8_t suid, uint8_t pf, uint8_t tx_seq) {
 	
 	uint8_t header, rx_next;
@@ -173,6 +176,33 @@ static uint8_t make_info_frame(uint8_t tx_next, uint8_t pf, uint8_t rx_next) {
 	header = ( (tx_next << TX_SEQ_OFFSET) | (pf << PF_OFFSET) | rx_next );
 
 	return header;
+}
+
+
+
+static busmail_t * busmail_send(uint8_t * data, int size, busmail_t *m, int fd) {
+
+	uint8_t tx_seq, rx_seq;
+	busmail_t * r;	
+
+	r = malloc(BUSMAIL_PACKET_OVER_HEAD - 1 + size);
+	if (!r) {
+		exit_failure("malloc");
+	}
+
+	tx_seq = (m->frame_header & TX_SEQ_MASK) >> TX_SEQ_OFFSET;
+	rx_seq = (m->frame_header & RX_SEQ_MASK) >> RX_SEQ_OFFSET;
+		
+	r->frame_header = make_info_frame(tx_seq, NO_PF, rx_seq);
+	r->program_id = API_PROG_ID;
+	r->task_id = API_TEST;
+	memcpy(&(r->mail_header), data, size);
+	/* r->mail_header =  */
+	/* r->mail_data[0] = 0; */
+
+	send_packet(r, BUSMAIL_PACKET_OVER_HEAD - 1 + size, fd);
+	free(r);
+
 }
 
 
@@ -210,10 +240,12 @@ static void supervisory_control_frame(packet_t *p) {
 
 }
 
+
+
 static void information_frame(packet_t *p) {
 
 	busmail_t * m = (busmail_t *) &p->data[0];
-	busmail_t * r;
+
 	uint8_t tx_seq, rx_seq, pf, sh, ih;
 	
 
@@ -238,24 +270,15 @@ static void information_frame(packet_t *p) {
 		
 	case API_FP_RESET_IND:
 		printf("API_FP_RESET_IND\n");
-		ih = make_info_frame(tx_seq, NO_PF, rx_seq);
-		printf("ih: %02x\n", ih);
-		send_packet(&sh, 1, p->fd);		
-
-		r = malloc(BUSMAIL_PACKET_OVER_HEAD + 1);
-		if (!r) {
-			exit_failure("malloc");
-		}
-
-		r->frame_header = make_info_frame(tx_seq, NO_PF, rx_seq);
-		r->program_id = API_PROG_ID;
-		r->task_id = API_TEST;
-		r->mail_header = API_FP_MM_START_PROTOCOL_REQ;
-		r->mail_data[0] = 0;
+		/* ih = make_info_frame(tx_seq, NO_PF, rx_seq); */
+		/* printf("ih: %02x\n", ih); */
+		/* send_packet(&sh, 1, p->fd);		 */
+		
+		ApiFpMmStartProtocolReqType * r = malloc(sizeof(ApiFpMmStartProtocolReqType));
+		r->Primitive = API_FP_MM_START_PROTOCOL_REQ;
 
 		printf("API_FP_MM_START_PROTOCOL_REQ\n");
-		send_packet(r, BUSMAIL_PACKET_OVER_HEAD + 1, p->fd);
-		free(r);
+		busmail_send((uint8_t *)r, sizeof(ApiFpMmStartProtocolReqType), m, p->fd);
 		break;
 
 	case API_SCL_STATUS_IND:
