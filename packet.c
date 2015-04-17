@@ -270,15 +270,15 @@ static void information_frame(packet_t *p) {
 		
 	case API_FP_RESET_IND:
 		printf("API_FP_RESET_IND\n");
-		/* ih = make_info_frame(tx_seq, NO_PF, rx_seq); */
-		/* printf("ih: %02x\n", ih); */
-		/* send_packet(&sh, 1, p->fd);		 */
 		
 		ApiFpMmStartProtocolReqType * r = malloc(sizeof(ApiFpMmStartProtocolReqType));
 		r->Primitive = API_FP_MM_START_PROTOCOL_REQ;
 
 		printf("API_FP_MM_START_PROTOCOL_REQ\n");
 		busmail_send((uint8_t *)r, sizeof(ApiFpMmStartProtocolReqType), m, p->fd);
+		free(r);
+
+
 		break;
 
 	case API_SCL_STATUS_IND:
