@@ -169,11 +169,17 @@ static uint8_t make_supervisory_frame(uint8_t suid, uint8_t pf, uint8_t tx_seq) 
 }
 
 
-static uint8_t make_info_frame(uint8_t tx_next, uint8_t pf, uint8_t rx_next) {
+static uint8_t make_info_frame(uint8_t tx_seq, uint8_t pf, uint8_t rx_seq) {
 	
-	uint8_t header;
+	uint8_t header, rx_next;
 
-	header = ( (tx_next << TX_SEQ_OFFSET) | (pf << PF_OFFSET) | rx_next );
+	if (tx_seq < 7) {
+		rx_next = tx_seq + 1;
+	} else {
+		rx_next = 0;
+	}
+
+	header = ( (rx_seq << TX_SEQ_OFFSET) | (pf << PF_OFFSET) | rx_next );
 
 	return header;
 }
