@@ -5,6 +5,7 @@
 #include <Api/FpGeneral/ApiFpGeneral.h>
 #include <RosPrimitiv.h>
 
+#include "error.h"
 #include "packet.h"
 #include "prog.h"
 
@@ -13,7 +14,8 @@
 #define BUSMAIL_PACKET_HEADER 0x10
 #define BUSMAIL_HEADER_SIZE 3
 #define BUSMAIL_PACKET_OVER_HEAD 4
-#define RTX_PROG_ID 0x00
+#define API_PROG_ID 0x00
+#define API_TEST 0x01
 
 #define PACKET_TYPE_MASK (1 << 7)
 #define INFORMATION_FRAME (0 << 7)
@@ -148,11 +150,27 @@ static int packet_inspect(packet_t *p) {
 }
 
 
-static uint8_t make_supervisory_frame(uint8_t suid, uint8_t pf, uint8_t rx_next) {
+static uint8_t make_supervisory_frame(uint8_t suid, uint8_t pf, uint8_t tx_seq) {
+	
+	uint8_t header, rx_next;
+
+	if (tx_seq < 7) {
+		rx_next = tx_seq + 1;
+	} else {
+		rx_next = 0;
+	}
+	
+	header = ( (suid << SUID_OFFSET) | (pf << PF_OFFSET) | rx_next );
+
+	return header;
+}
+
+
+static uint8_t make_info_frame(uint8_t tx_next, uint8_t pf, uint8_t rx_next) {
 	
 	uint8_t header;
 
-	header = ( (suid << SUID_OFFSET) | (pf << PF_OFFSET) | rx_next );
+	header = ( (tx_next << TX_SEQ_OFFSET) | (pf << PF_OFFSET) | rx_next );
 
 	return header;
 }
@@ -195,10 +213,12 @@ static void supervisory_control_frame(packet_t *p) {
 static void information_frame(packet_t *p) {
 
 	busmail_t * m = (busmail_t *) &p->data[0];
-	uint8_t tx_seq, rx_seq, pf, header;
+	busmail_t * r;
+	uint8_t tx_seq, rx_seq, pf, sh, ih;
+	
 
 	/* Drop unwanted frames */
-	if( m->program_id != RTX_PROG_ID ) {
+	if( m->program_id != API_PROG_ID ) {
 		return;
 	}
 
@@ -218,24 +238,38 @@ static void information_frame(packet_t *p) {
 		
 	case API_FP_RESET_IND:
 		printf("API_FP_RESET_IND\n");
+		ih = make_info_frame(tx_seq, NO_PF, rx_seq);
+		printf("ih: %02x\n", ih);
+		send_packet(&sh, 1, p->fd);		
+
+		r = malloc(BUSMAIL_PACKET_OVER_HEAD + 1);
+		if (!r) {
+			exit_failure("malloc");
+		}
+
+		r->frame_header = make_info_frame(tx_seq, NO_PF, rx_seq);
+		r->program_id = API_PROG_ID;
+		r->task_id = API_TEST;
+		r->mail_header = API_FP_MM_START_PROTOCOL_REQ;
+		r->mail_data[0] = 0;
+
+		printf("API_FP_MM_START_PROTOCOL_REQ\n");
+		send_packet(r, BUSMAIL_PACKET_OVER_HEAD + 1, p->fd);
+		free(r);
 		break;
 
 	case API_SCL_STATUS_IND:
 		printf("API_SCL_STATUS_IND\n");
+		/* just ack the package */
+		sh = make_supervisory_frame(SUID_RR, NO_PF, tx_seq);
+		printf("header: %02x\n", sh);
+		printf("SUID_RR\n");
+		send_packet(&sh, 1, p->fd);
 		break;
+
 		
 	}
 
-	if (tx_seq < 7) {
-		rx_next = tx_seq + 1;
-	} else {
-		rx_next = 0;
-	}
-
-	header = make_supervisory_frame(SUID_RR, NO_PF, rx_next);
-	printf("header: %02x\n", header);
-	
-	send_packet(&header, 1, p->fd);
 
 }
 
