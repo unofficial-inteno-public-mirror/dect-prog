@@ -61,7 +61,7 @@ void handle_prog_package(event_t *e) {
 	p->fd = e->fd;
 	p->size = 0;
 
-	//util_dump(e->in, e->incount, "[READ]");
+	util_dump(e->in, e->incount, "[READ]");
 
 	/* Add input to buffer */
 	if (buffer_write(buf, e->in, e->incount) == 0) {

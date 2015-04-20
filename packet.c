@@ -276,7 +276,12 @@ static void information_frame(packet_t *p) {
 		
 	case API_FP_RESET_IND:
 		printf("API_FP_RESET_IND\n");
-		
+
+		/* Ack the package */
+		/* printf("ACK: %d\n", tx_seq); */
+		/* sh = make_supervisory_frame(SUID_RR, NO_PF, tx_seq); */
+		/* send_packet(&sh, 1, p->fd); */
+
 		ApiFpMmStartProtocolReqType * r = malloc(sizeof(ApiFpMmStartProtocolReqType));
 		r->Primitive = API_FP_MM_START_PROTOCOL_REQ;
 
