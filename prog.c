@@ -50,6 +50,9 @@ void init_prog_state(int dect_fd) {
 	/* Init input buffer */
 	buf = buffer_new(500);
 	
+	/* Init busmail subsystem */
+	busmail_init(dect_fd);
+	
 }
 
 

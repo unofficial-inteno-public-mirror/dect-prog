@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include <Api/FpGeneral/ApiFpGeneral.h>
 #include <Api/FpMm/ApiFpMm.h>
@@ -50,6 +51,9 @@
 
 uint8_t rx_next;
 uint8_t tx_next;
+uint8_t tx_seq, rx_seq;
+
+int busmail_fd;
 
 static uint8_t * make_tx_packet(uint8_t * tx, void * packet, int data_size) {
   
@@ -186,9 +190,9 @@ static uint8_t make_info_frame(uint8_t tx_seq, uint8_t pf, uint8_t rx_seq) {
 
 
 
-static busmail_t * busmail_send(uint8_t * data, int size, busmail_t *m, int fd) {
+static busmail_t * busmail_send(uint8_t * data, int size) {
 
-	uint8_t tx_seq, rx_seq;
+	uint8_t tx_seq_tmp, rx_seq_tmp;
 	busmail_t * r;	
 
 	r = malloc(BUSMAIL_PACKET_OVER_HEAD - 1 + size);
@@ -196,17 +200,20 @@ static busmail_t * busmail_send(uint8_t * data, int size, busmail_t *m, int fd) 
 		exit_failure("malloc");
 	}
 
-	tx_seq = (m->frame_header & TX_SEQ_MASK) >> TX_SEQ_OFFSET;
-	rx_seq = (m->frame_header & RX_SEQ_MASK) >> RX_SEQ_OFFSET;
 		
 	r->frame_header = make_info_frame(tx_seq, NO_PF, rx_seq);
 	r->program_id = API_PROG_ID;
 	r->task_id = API_TEST;
 	memcpy(&(r->mail_header), data, size);
-	/* r->mail_header =  */
-	/* r->mail_data[0] = 0; */
 
-	send_packet(r, BUSMAIL_PACKET_OVER_HEAD - 1 + size, fd);
+	tx_seq_tmp = (r->frame_header & TX_SEQ_MASK) >> TX_SEQ_OFFSET;
+	rx_seq_tmp = (r->frame_header & RX_SEQ_MASK) >> RX_SEQ_OFFSET;
+
+	printf("BUSMAIL_SEND_INFO\n");
+	printf("tx_seq: %d\n", tx_seq_tmp);
+	printf("rx_seq: %d\n", rx_seq_tmp);
+
+	send_packet(r, BUSMAIL_PACKET_OVER_HEAD - 1 + size, busmail_fd);
 	free(r);
 
 }
@@ -248,29 +255,7 @@ static void supervisory_control_frame(packet_t *p) {
 
 
 
-static void information_frame(packet_t *p) {
-
-	busmail_t * m = (busmail_t *) &p->data[0];
-
-	uint8_t tx_seq, rx_seq, pf, sh, ih;
-	
-
-	/* Drop unwanted frames */
-	if( m->program_id != API_PROG_ID ) {
-		return;
-	}
-
-	packet_dump(p);
-	
-	tx_seq = (m->frame_header & TX_SEQ_MASK) >> TX_SEQ_OFFSET;
-	rx_seq = (m->frame_header & RX_SEQ_MASK) >> RX_SEQ_OFFSET;
-	pf = (m->frame_header & PF_MASK) >> PF_OFFSET;
-
-
-	printf("frame_header: %02x\n", m->frame_header);
-	printf("tx_seq: %d\n", tx_seq);
-	printf("rx_seq: %d\n", rx_seq);
-	printf("pf: %d\n", pf);
+static void application_frame(busmail_t *m) {
 
 	switch (m->mail_header) {
 		
@@ -282,30 +267,62 @@ static void information_frame(packet_t *p) {
 		/* sh = make_supervisory_frame(SUID_RR, NO_PF, tx_seq); */
 		/* send_packet(&sh, 1, p->fd); */
 
+		/* Start protocol */
 		ApiFpMmStartProtocolReqType * r = malloc(sizeof(ApiFpMmStartProtocolReqType));
 		r->Primitive = API_FP_MM_START_PROTOCOL_REQ;
 
 		printf("API_FP_MM_START_PROTOCOL_REQ\n");
-		busmail_send((uint8_t *)r, sizeof(ApiFpMmStartProtocolReqType), m, p->fd);
+		busmail_send((uint8_t *)r, sizeof(ApiFpMmStartProtocolReqType));
 		free(r);
-
 
 		break;
 
 	case API_SCL_STATUS_IND:
 		printf("API_SCL_STATUS_IND\n");
 		/* just ack the package */
-		sh = make_supervisory_frame(SUID_RR, NO_PF, tx_seq);
-		printf("header: %02x\n", sh);
-		printf("SUID_RR\n");
-		send_packet(&sh, 1, p->fd);
+		/* sh = make_supervisory_frame(SUID_RR, NO_PF, tx_seq); */
+		/* printf("header: %02x\n", sh); */
+		/* printf("SUID_RR\n"); */
+		/* send_packet(&sh, 1, p->fd); */
 		break;
 
-		
+	}
+}
+
+
+
+static void information_frame(packet_t *p) {
+
+	busmail_t * m = (busmail_t *) &p->data[0];
+
+	uint8_t pf, sh, ih;
+	
+
+	/* Drop unwanted frames */
+	if( m->program_id != API_PROG_ID ) {
+		return;
 	}
 
+	packet_dump(p);
+	
+	/* Update busmail packet counters */
+	tx_seq = (m->frame_header & TX_SEQ_MASK) >> TX_SEQ_OFFSET;
+	rx_seq = (m->frame_header & RX_SEQ_MASK) >> RX_SEQ_OFFSET;
+
+	pf = (m->frame_header & PF_MASK) >> PF_OFFSET;
+
+	printf("frame_header: %02x\n", m->frame_header);
+	printf("tx_seq: %d\n", tx_seq);
+	printf("rx_seq: %d\n", rx_seq);
+	printf("pf: %d\n", pf);
+
+	/* Process application frame */
+	application_frame(m);
 
 }
+
+
+
 
 
 int packet_get(packet_t *p, buffer_t *b) {
@@ -418,3 +435,8 @@ void packet_dispatch(packet_t *p) {
 
 }
 
+int busmail_init(int fd) {
+
+	printf("busmail_init\n");
+	busmail_fd = fd;
+}
