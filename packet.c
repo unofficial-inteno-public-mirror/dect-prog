@@ -157,7 +157,7 @@ static int packet_inspect(packet_t *p) {
 
 
 
-static uint8_t make_supervisory_frame(uint8_t suid, uint8_t pf, uint8_t tx_seq) {
+static uint8_t make_supervisory_frame(uint8_t suid, uint8_t pf) {
 	
 	uint8_t header, rx_next;
 
@@ -173,7 +173,7 @@ static uint8_t make_supervisory_frame(uint8_t suid, uint8_t pf, uint8_t tx_seq) 
 }
 
 
-static uint8_t make_info_frame(uint8_t tx_seq, uint8_t pf, uint8_t rx_seq) {
+static uint8_t make_info_frame(uint8_t pf) {
 	
 	uint8_t header, rx_next;
 
@@ -201,7 +201,7 @@ static busmail_send(uint8_t * data, int size) {
 	}
 
 		
-	r->frame_header = make_info_frame(tx_seq, NO_PF, rx_seq);
+	r->frame_header = make_info_frame(NO_PF);
 	r->program_id = API_PROG_ID;
 	r->task_id = API_TEST;
 	memcpy(&(r->mail_header), data, size);
@@ -212,19 +212,22 @@ static busmail_send(uint8_t * data, int size) {
 	printf("BUSMAIL_SEND_INFO\n");
 	printf("tx_seq: %d\n", tx_seq_tmp);
 	printf("rx_seq: %d\n", rx_seq_tmp);
-
+	
 	send_packet(r, BUSMAIL_PACKET_OVER_HEAD - 1 + size, busmail_fd);
 	free(r);
+	
 
 }
 
 
 static busmail_ack(void) {
 
-	uint8_t sh = make_supervisory_frame(SUID_RR, NO_PF, tx_seq);
+	uint8_t sh, rx_seq_tmp;
 
-	printf("header: %02x\n", sh);
-	printf("SUID_RR\n");
+	sh = make_supervisory_frame(SUID_RR, NO_PF);
+	rx_seq_tmp = (sh & RX_SEQ_MASK) >> RX_SEQ_OFFSET;
+	
+	printf("BUSMAIL_ACK %d\n", rx_seq_tmp);
 	send_packet(&sh, 1, busmail_fd);
 
 }
