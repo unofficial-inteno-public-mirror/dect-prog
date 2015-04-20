@@ -190,7 +190,7 @@ static uint8_t make_info_frame(uint8_t tx_seq, uint8_t pf, uint8_t rx_seq) {
 
 
 
-static busmail_t * busmail_send(uint8_t * data, int size) {
+static busmail_send(uint8_t * data, int size) {
 
 	uint8_t tx_seq_tmp, rx_seq_tmp;
 	busmail_t * r;	
@@ -218,6 +218,16 @@ static busmail_t * busmail_send(uint8_t * data, int size) {
 
 }
 
+
+static busmail_ack(void) {
+
+	uint8_t sh = make_supervisory_frame(SUID_RR, NO_PF, tx_seq);
+
+	printf("header: %02x\n", sh);
+	printf("SUID_RR\n");
+	send_packet(&sh, 1, busmail_fd);
+
+}
 
 static void supervisory_control_frame(packet_t *p) {
 	
@@ -262,11 +272,6 @@ static void application_frame(busmail_t *m) {
 	case API_FP_RESET_IND:
 		printf("API_FP_RESET_IND\n");
 
-		/* Ack the package */
-		/* printf("ACK: %d\n", tx_seq); */
-		/* sh = make_supervisory_frame(SUID_RR, NO_PF, tx_seq); */
-		/* send_packet(&sh, 1, p->fd); */
-
 		/* Start protocol */
 		ApiFpMmStartProtocolReqType * r = malloc(sizeof(ApiFpMmStartProtocolReqType));
 		r->Primitive = API_FP_MM_START_PROTOCOL_REQ;
@@ -280,10 +285,8 @@ static void application_frame(busmail_t *m) {
 	case API_SCL_STATUS_IND:
 		printf("API_SCL_STATUS_IND\n");
 		/* just ack the package */
-		/* sh = make_supervisory_frame(SUID_RR, NO_PF, tx_seq); */
-		/* printf("header: %02x\n", sh); */
-		/* printf("SUID_RR\n"); */
-		/* send_packet(&sh, 1, p->fd); */
+		busmail_ack();
+
 		break;
 
 	}
