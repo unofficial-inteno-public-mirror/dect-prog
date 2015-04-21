@@ -4,8 +4,10 @@
 #include <stdbool.h>
 
 #include <Api/FpGeneral/ApiFpGeneral.h>
+#include <Api/FpCc/ApiFpCc.h>
 #include <Api/FpMm/ApiFpMm.h>
 #include <RosPrimitiv.h>
+#include <Api/RsStandard.h>
 
 #include "error.h"
 #include "packet.h"
@@ -179,13 +181,11 @@ static uint8_t make_info_frame(uint8_t pf) {
 	
 	uint8_t header, rx_next;
 
-	if (rx_seq_r < 7) {
-		rx_next = tx_seq_r + 1;
-	} else {
-		rx_next = 0;
+	if (rx_seq_l == 7) {
+		rx_seq_l = 0;
 	}
 
-	header = ( (tx_seq_l << TX_SEQ_OFFSET) | (pf << PF_OFFSET) | rx_next );
+	header = ( (tx_seq_l << TX_SEQ_OFFSET) | (pf << PF_OFFSET) | rx_seq_l );
 
 	return header;
 }
@@ -215,8 +215,6 @@ static busmail_send(uint8_t * data, int size) {
 	printf("tx_seq_l: %d\n", tx_seq_l);
 	printf("rx_seq_l: %d\n", tx_seq_l);
 
-	printf("tx_seq_tmp: %d\n", tx_seq_tmp);
-	printf("rx_seq_tmp: %d\n", tx_seq_tmp);
 	printf("frame_header: %d\n", (r->frame_header & TX_SEQ_MASK));
 	
 	send_packet(r, BUSMAIL_PACKET_OVER_HEAD - 1 + size, busmail_fd);
@@ -273,6 +271,30 @@ static void supervisory_control_frame(packet_t *p) {
 }
 
 
+static void fw_version_cfm(busmail_t *m) {
+
+	ApiFpGetFwVersionCfmType * p = (ApiFpGetFwVersionCfmType *) &m->mail_header;
+
+	printf("fw_version_cfm\n");
+	
+	if (p->Status == RSS_SUCCESS) {
+		printf("Status: RSS_SUCCESS\n");
+	} else {
+		printf("Status: RSS_FAIL: %x\n", p->Status);
+	}
+
+	printf("VersionHex %x\n", (uint)p->VersionHex);
+	
+	if (p->DectType == API_EU_DECT) {
+		printf("DectType: API_EU_DECT\n");
+	} else {
+		printf("DectType: BOGUS\n");
+	}
+
+}
+
+
+
 
 static void application_frame(busmail_t *m) {
 	
@@ -283,6 +305,12 @@ static void application_frame(busmail_t *m) {
 	case API_FP_RESET_IND:
 		printf("API_FP_RESET_IND\n");
 
+
+		printf("API_FP_GET_FW_VERSION_REQ\n");
+		ApiFpGetFwVersionReqType m1 = { .Primitive = API_FP_GET_FW_VERSION_REQ, };
+		busmail_send((uint8_t *)&m1, sizeof(ApiFpGetFwVersionReqType));
+
+
 		/* /\* Start protocol *\/ */
 		/* ApiFpMmStartProtocolReqType * r = malloc(sizeof(ApiFpMmStartProtocolReqType)); */
 		/* r->Primitive = API_FP_MM_EXT_HIGHER_LAYER_CAP2_REQ; */
@@ -291,20 +319,60 @@ static void application_frame(busmail_t *m) {
 		/* busmail_send((uint8_t *)r, sizeof(ApiFpMmStartProtocolReqType)); */
 		/* free(r); */
 
-		
-		/* Start protocol */
-		ApiFpMmStartProtocolReqType * r = malloc(sizeof(ApiFpMmStartProtocolReqType));
-		r->Primitive = API_FP_MM_START_PROTOCOL_REQ;
+		/* ApiFpCcFeaturesReqType * r = (ApiFpCcFeaturesReqType*) malloc(sizeof(ApiFpCcFeaturesReqType)); */
 
-		printf("API_FP_MM_START_PROTOCOL_REQ\n");
-		busmail_send((uint8_t *)r, sizeof(ApiFpMmStartProtocolReqType));
-		free(r);
+		/* r->Primitive = API_FP_CC_FEATURES_REQ; */
+		/* r->ApiFpCcFeature = API_FP_CC_EXTENDED_TERMINAL_ID_SUPPORT; */
+
+		/* printf("API_FP_CC_FEATURES_REQ\n"); */
+		/* busmail_send((uint8_t *)r, sizeof(ApiFpCcFeaturesReqType)); */
+		/* free(r); */
+		
 		
 
 		break;
 
+
+	case API_FP_GET_FW_VERSION_CFM:
+		printf("API_FP_GET_FW_VERSION_CFM\n");
+		fw_version_cfm(m);
+		/* just ack the package */
+		busmail_ack();
+
+		break;
+
+
 	case API_SCL_STATUS_IND:
 		printf("API_SCL_STATUS_IND\n");
+		/* just ack the package */
+		busmail_ack();
+
+		break;
+
+
+	case API_FP_CC_FEATURES_CFM:
+		printf("API_FP_CC_FEATURES_CFM\n");
+
+
+		/* Start protocol */
+		ApiFpMmStartProtocolReqType * r1 = malloc(sizeof(ApiFpMmStartProtocolReqType));
+		r1->Primitive = API_FP_MM_START_PROTOCOL_REQ;
+
+		printf("API_FP_MM_START_PROTOCOL_REQ\n");
+		busmail_send((uint8_t *)r1, sizeof(ApiFpMmStartProtocolReqType));
+		free(r1);
+
+
+		/* Start registration */
+		ApiFpMmSetRegistrationModeReqType r2 = { .Primitive = API_FP_MM_SET_REGISTRATION_MODE_REQ, \
+							.RegistrationEnabled = true, .DeleteLastHandset = false};
+
+		printf("API_FP_MM_SET_REGISTRATION_MODE_REQ\n");
+		busmail_send((uint8_t *)&r2, sizeof(ApiFpMmStartProtocolReqType));
+
+
+	case API_FP_MM_SET_REGISTRATION_MODE_CFM:
+		printf("API_FP_MM_SET_REGISTRATION_MODE_CFM\n");
 		/* just ack the package */
 		busmail_ack();
 
@@ -340,10 +408,12 @@ static void information_frame(packet_t *p) {
 	printf("rx_seq_r: %d\n", rx_seq_r);
 	printf("pf: %d\n", pf);
 
+	rx_seq_l++;
+
 	/* Process application frame */
 	application_frame(m);
 
-	tx_seq_r++;
+
 
 }
 
