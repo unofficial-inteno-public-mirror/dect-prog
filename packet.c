@@ -163,15 +163,9 @@ static int packet_inspect(packet_t *p) {
 
 static uint8_t make_supervisory_frame(uint8_t suid, uint8_t pf) {
 	
-	uint8_t header, rx_next;
+	uint8_t header;
 
-	if (tx_seq_r < 7) {
-		rx_next = tx_seq_r + 1;
-	} else {
-		rx_next = 0;
-	}
-	
-	header = ( (suid << SUID_OFFSET) | (pf << PF_OFFSET) | rx_next );
+	header = ( (suid << SUID_OFFSET) | (pf << PF_OFFSET) | rx_seq_l );
 
 	return header;
 }
@@ -179,11 +173,7 @@ static uint8_t make_supervisory_frame(uint8_t suid, uint8_t pf) {
 
 static uint8_t make_info_frame(uint8_t pf) {
 	
-	uint8_t header, rx_next;
-
-	if (rx_seq_l == 7) {
-		rx_seq_l = 0;
-	}
+	uint8_t header;
 
 	header = ( (tx_seq_l << TX_SEQ_OFFSET) | (pf << PF_OFFSET) | rx_seq_l );
 
@@ -213,9 +203,9 @@ static busmail_send(uint8_t * data, int size) {
 
 	printf("BUSMAIL_SEND_INFO\n");
 	printf("tx_seq_l: %d\n", tx_seq_l);
-	printf("rx_seq_l: %d\n", tx_seq_l);
+	printf("rx_seq_l: %d\n", rx_seq_l);
 
-	printf("frame_header: %d\n", (r->frame_header & TX_SEQ_MASK));
+	printf("frame_header: %x\n", (r->frame_header));
 	
 	send_packet(r, BUSMAIL_PACKET_OVER_HEAD - 1 + size, busmail_fd);
 	free(r);
@@ -241,13 +231,15 @@ static busmail_ack(void) {
 static void supervisory_control_frame(packet_t *p) {
 	
 	busmail_t * m = (busmail_t *) &p->data[0];
-	uint8_t rx_seq, pf, suid;
+	uint8_t pf, suid;
 
-	rx_seq = (m->frame_header & RX_SEQ_MASK) >> RX_SEQ_OFFSET;
+	rx_seq_r = (m->frame_header & RX_SEQ_MASK) >> RX_SEQ_OFFSET;
 	pf = (m->frame_header & PF_MASK) >> PF_OFFSET;
 	suid = (m->frame_header & SUID_MASK) >> SUID_OFFSET;
 
 	printf("frame_header: %02x\n", m->frame_header);
+
+	packet_dump(p);
 
 	
 	switch (suid) {
@@ -265,7 +257,7 @@ static void supervisory_control_frame(packet_t *p) {
 		break;
 	}
 
-	printf("rx_seq: %d\n", rx_seq);
+	printf("rx_seq_r: %d\n", rx_seq_r);
 	printf("pf: %d\n", pf);
 
 }
@@ -408,13 +400,13 @@ static void information_frame(packet_t *p) {
 	printf("rx_seq_r: %d\n", rx_seq_r);
 	printf("pf: %d\n", pf);
 
-	rx_seq_l++;
+	rx_seq_l = tx_seq_r + 1;
+	if (rx_seq_l == 7) {
+		rx_seq_l = 0;
+	}
 
 	/* Process application frame */
 	application_frame(m);
-
-
-
 }
 
 
