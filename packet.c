@@ -304,13 +304,6 @@ static void application_frame(busmail_t *m) {
 		busmail_send((uint8_t *)&m1, sizeof(ApiFpGetFwVersionReqType), PF);
 
 
-		/* /\* Start protocol *\/ */
-		/* ApiFpMmStartProtocolReqType * r = malloc(sizeof(ApiFpMmStartProtocolReqType)); */
-		/* r->Primitive = API_FP_MM_EXT_HIGHER_LAYER_CAP2_REQ; */
-
-		/* printf("API_FP_MM_START_PROTOCOL_REQ\n"); */
-		/* busmail_send((uint8_t *)r, sizeof(ApiFpMmStartProtocolReqType)); */
-		/* free(r); */
 
 		/* ApiFpCcFeaturesReqType * r = (ApiFpCcFeaturesReqType*) malloc(sizeof(ApiFpCcFeaturesReqType)); */
 
@@ -329,9 +322,20 @@ static void application_frame(busmail_t *m) {
 	case API_FP_GET_FW_VERSION_CFM:
 		printf("API_FP_GET_FW_VERSION_CFM\n");
 		fw_version_cfm(m);
-		/* just ack the package */
-		busmail_ack();
 
+
+		/* /\* Start protocol *\/ */
+		ApiFpMmStartProtocolReqType * r = malloc(sizeof(ApiFpMmStartProtocolReqType));
+		r->Primitive = API_FP_MM_START_PROTOCOL_REQ;
+
+		printf("API_FP_MM_START_PROTOCOL_REQ\n");
+		busmail_send((uint8_t *)r, sizeof(ApiFpMmStartProtocolReqType), PF);
+		free(r);
+
+
+		/* just ack the package */
+		/* busmail_ack(); */
+		
 		break;
 
 
