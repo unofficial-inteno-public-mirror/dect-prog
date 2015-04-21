@@ -105,12 +105,14 @@ int main(int argc, char * argv[]) {
 					util_dump(e->out, e->outcount, "[WRITE]");
 					write(e->fd, e->out, e->outcount);
 
-					/* Reset event_t */
-					e->outcount = 0;
-					e->incount = 0;
-					memset(e->out, 0, BUF_SIZE);
-					memset(e->in, 0, BUF_SIZE);
+				
 				}
+
+				/* Reset event_t */
+				e->outcount = 0;
+				e->incount = 0;
+				memset(e->out, 0, BUF_SIZE);
+				memset(e->in, 0, BUF_SIZE);
 			}
 		}
 		
