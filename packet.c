@@ -49,9 +49,7 @@
 #define SAMB_POLL_SET 0xc8
 #define SAMB_NO_POLL_SET 0xc0
 
-uint8_t rx_next;
-uint8_t tx_next;
-uint8_t tx_seq, rx_seq;
+uint8_t tx_seq_l, rx_seq_l, tx_seq_r, rx_seq_r;
 
 int busmail_fd;
 
@@ -101,6 +99,10 @@ static void unnumbered_control_frame(packet_t *p) {
 	
 	if (header == SAMB_POLL_SET) {
 		printf("SAMB. Reset Rx and Tx counters\n");
+		tx_seq_l = 0;
+		rx_seq_l = 0;
+		tx_seq_r = 0;
+		rx_seq_r = 0;
 
 		printf("Reply SAMB_NO_POLL_SET. \n");
 		data = SAMB_NO_POLL_SET;
@@ -161,8 +163,8 @@ static uint8_t make_supervisory_frame(uint8_t suid, uint8_t pf) {
 	
 	uint8_t header, rx_next;
 
-	if (tx_seq < 7) {
-		rx_next = tx_seq + 1;
+	if (tx_seq_r < 7) {
+		rx_next = tx_seq_r + 1;
 	} else {
 		rx_next = 0;
 	}
@@ -177,13 +179,13 @@ static uint8_t make_info_frame(uint8_t pf) {
 	
 	uint8_t header, rx_next;
 
-	if (tx_seq < 7) {
-		rx_next = tx_seq + 1;
+	if (rx_seq_r < 7) {
+		rx_next = tx_seq_r + 1;
 	} else {
 		rx_next = 0;
 	}
 
-	header = ( (rx_seq << TX_SEQ_OFFSET) | (pf << PF_OFFSET) | rx_next );
+	header = ( (tx_seq_l << TX_SEQ_OFFSET) | (pf << PF_OFFSET) | rx_next );
 
 	return header;
 }
@@ -210,12 +212,18 @@ static busmail_send(uint8_t * data, int size) {
 	rx_seq_tmp = (r->frame_header & RX_SEQ_MASK) >> RX_SEQ_OFFSET;
 
 	printf("BUSMAIL_SEND_INFO\n");
-	printf("tx_seq: %d\n", tx_seq_tmp);
-	printf("rx_seq: %d\n", rx_seq_tmp);
+	printf("tx_seq_l: %d\n", tx_seq_l);
+	printf("rx_seq_l: %d\n", tx_seq_l);
+
+	printf("tx_seq_tmp: %d\n", tx_seq_tmp);
+	printf("rx_seq_tmp: %d\n", tx_seq_tmp);
+	printf("frame_header: %d\n", (r->frame_header & TX_SEQ_MASK));
 	
 	send_packet(r, BUSMAIL_PACKET_OVER_HEAD - 1 + size, busmail_fd);
 	free(r);
 	
+	/* Update packet counter */
+	tx_seq_l++;
 
 }
 
@@ -312,14 +320,14 @@ static void information_frame(packet_t *p) {
 	packet_dump(p);
 	
 	/* Update busmail packet counters */
-	tx_seq = (m->frame_header & TX_SEQ_MASK) >> TX_SEQ_OFFSET;
-	rx_seq = (m->frame_header & RX_SEQ_MASK) >> RX_SEQ_OFFSET;
+	tx_seq_r = (m->frame_header & TX_SEQ_MASK) >> TX_SEQ_OFFSET;
+	rx_seq_r = (m->frame_header & RX_SEQ_MASK) >> RX_SEQ_OFFSET;
 
 	pf = (m->frame_header & PF_MASK) >> PF_OFFSET;
 
 	printf("frame_header: %02x\n", m->frame_header);
-	printf("tx_seq: %d\n", tx_seq);
-	printf("rx_seq: %d\n", rx_seq);
+	printf("tx_seq_r: %d\n", tx_seq_r);
+	printf("rx_seq_r: %d\n", rx_seq_r);
 	printf("pf: %d\n", pf);
 
 	/* Process application frame */
