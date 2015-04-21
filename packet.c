@@ -203,7 +203,7 @@ static busmail_send(uint8_t * data, int size) {
 	}
 
 		
-	r->frame_header = make_info_frame(NO_PF);
+	r->frame_header = make_info_frame(PF);
 	r->program_id = API_PROG_ID;
 	r->task_id = API_TEST;
 	memcpy(&(r->mail_header), data, size);
@@ -252,9 +252,7 @@ static void supervisory_control_frame(packet_t *p) {
 	printf("frame_header: %02x\n", m->frame_header);
 
 	
-	printf("suid: ");
-	
-	switch (suid & SUID_MASK) {
+	switch (suid) {
 		
 	case SUID_RR:
 		printf("SUID_RR\n");
@@ -277,12 +275,23 @@ static void supervisory_control_frame(packet_t *p) {
 
 
 static void application_frame(busmail_t *m) {
+	
+	int i;
 
 	switch (m->mail_header) {
 		
 	case API_FP_RESET_IND:
 		printf("API_FP_RESET_IND\n");
 
+		/* /\* Start protocol *\/ */
+		/* ApiFpMmStartProtocolReqType * r = malloc(sizeof(ApiFpMmStartProtocolReqType)); */
+		/* r->Primitive = API_FP_MM_EXT_HIGHER_LAYER_CAP2_REQ; */
+
+		/* printf("API_FP_MM_START_PROTOCOL_REQ\n"); */
+		/* busmail_send((uint8_t *)r, sizeof(ApiFpMmStartProtocolReqType)); */
+		/* free(r); */
+
+		
 		/* Start protocol */
 		ApiFpMmStartProtocolReqType * r = malloc(sizeof(ApiFpMmStartProtocolReqType));
 		r->Primitive = API_FP_MM_START_PROTOCOL_REQ;
@@ -290,6 +299,7 @@ static void application_frame(busmail_t *m) {
 		printf("API_FP_MM_START_PROTOCOL_REQ\n");
 		busmail_send((uint8_t *)r, sizeof(ApiFpMmStartProtocolReqType));
 		free(r);
+		
 
 		break;
 
@@ -332,6 +342,8 @@ static void information_frame(packet_t *p) {
 
 	/* Process application frame */
 	application_frame(m);
+
+	tx_seq_r++;
 
 }
 
