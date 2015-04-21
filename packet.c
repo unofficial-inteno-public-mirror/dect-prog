@@ -6,14 +6,13 @@
 #include <Api/FpGeneral/ApiFpGeneral.h>
 #include <Api/FpCc/ApiFpCc.h>
 #include <Api/FpMm/ApiFpMm.h>
+
 #include <RosPrimitiv.h>
 #include <Api/RsStandard.h>
 
 #include "error.h"
 #include "packet.h"
 #include "prog.h"
-
-
 
 #define BUSMAIL_PACKET_HEADER 0x10
 #define BUSMAIL_HEADER_SIZE 3
@@ -314,7 +313,7 @@ static void application_frame(busmail_t *m) {
 		/* busmail_send((uint8_t *)r, sizeof(ApiFpCcFeaturesReqType)); */
 		/* free(r); */
 		
-		
+
 
 		break;
 
@@ -322,6 +321,19 @@ static void application_frame(busmail_t *m) {
 	case API_FP_GET_FW_VERSION_CFM:
 		printf("API_FP_GET_FW_VERSION_CFM\n");
 		fw_version_cfm(m);
+
+
+		/* setup default */
+		printf("API_FP_MM_EXT_HIGHER_LAYER_CAP2_REQ\n");
+		ApiFpMmExtHigherLayerCap2ReqType* m2 = (ApiFpMmExtHigherLayerCap2ReqType*) \
+			malloc((sizeof(ApiFpMmExtHigherLayerCap2ReqType)));
+		m2->Primitive = API_FP_MM_EXT_HIGHER_LAYER_CAP2_REQ;
+		m2->FpCapBit24_31 = 0x84;
+		m2->FpCapBit32_39 = 0x24; /* no_emmision == 0 */
+		m2->FpCapBit40_47 = 0;
+		busmail_send((uint8_t *)m2, sizeof(ApiFpMmExtHigherLayerCap2ReqType), PF);
+		free(m2);
+
 
 
 		/* /\* Start protocol *\/ */
