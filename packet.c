@@ -182,7 +182,7 @@ static uint8_t make_info_frame(uint8_t pf) {
 
 
 
-static busmail_send(uint8_t * data, int size) {
+static busmail_send(uint8_t * data, int size, uint8_t pf) {
 
 	uint8_t tx_seq_tmp, rx_seq_tmp;
 	busmail_t * r;	
@@ -193,7 +193,7 @@ static busmail_send(uint8_t * data, int size) {
 	}
 
 		
-	r->frame_header = make_info_frame(PF);
+	r->frame_header = make_info_frame(pf);
 	r->program_id = API_PROG_ID;
 	r->task_id = API_TEST;
 	memcpy(&(r->mail_header), data, size);
@@ -204,6 +204,7 @@ static busmail_send(uint8_t * data, int size) {
 	printf("BUSMAIL_SEND_INFO\n");
 	printf("tx_seq_l: %d\n", tx_seq_l);
 	printf("rx_seq_l: %d\n", rx_seq_l);
+	printf("pf: %d\n", pf);
 
 	printf("frame_header: %x\n", (r->frame_header));
 	
@@ -300,7 +301,7 @@ static void application_frame(busmail_t *m) {
 
 		printf("API_FP_GET_FW_VERSION_REQ\n");
 		ApiFpGetFwVersionReqType m1 = { .Primitive = API_FP_GET_FW_VERSION_REQ, };
-		busmail_send((uint8_t *)&m1, sizeof(ApiFpGetFwVersionReqType));
+		busmail_send((uint8_t *)&m1, sizeof(ApiFpGetFwVersionReqType), PF);
 
 
 		/* /\* Start protocol *\/ */
@@ -351,7 +352,7 @@ static void application_frame(busmail_t *m) {
 		r1->Primitive = API_FP_MM_START_PROTOCOL_REQ;
 
 		printf("API_FP_MM_START_PROTOCOL_REQ\n");
-		busmail_send((uint8_t *)r1, sizeof(ApiFpMmStartProtocolReqType));
+		busmail_send((uint8_t *)r1, sizeof(ApiFpMmStartProtocolReqType), NO_PF);
 		free(r1);
 
 
@@ -360,7 +361,7 @@ static void application_frame(busmail_t *m) {
 							.RegistrationEnabled = true, .DeleteLastHandset = false};
 
 		printf("API_FP_MM_SET_REGISTRATION_MODE_REQ\n");
-		busmail_send((uint8_t *)&r2, sizeof(ApiFpMmStartProtocolReqType));
+		busmail_send((uint8_t *)&r2, sizeof(ApiFpMmStartProtocolReqType), PF);
 
 
 	case API_FP_MM_SET_REGISTRATION_MODE_CFM:
