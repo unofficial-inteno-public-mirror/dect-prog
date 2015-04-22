@@ -226,7 +226,7 @@ static busmail_ack(void) {
 	sh = make_supervisory_frame(SUID_RR, NO_PF);
 	rx_seq_tmp = (sh & RX_SEQ_MASK) >> RX_SEQ_OFFSET;
 	
-	printf("BUSMAIL_ACK %d\n", rx_seq_tmp);
+	printf("\nWRITE: BUSMAIL_ACK %d\n", rx_seq_tmp);
 	send_packet(&sh, 1, busmail_fd);
 
 }
@@ -349,6 +349,14 @@ static void application_frame(busmail_t *m) {
 		free(r);
 
 
+		/* Start registration */
+		ApiFpMmSetRegistrationModeReqType r2 = { .Primitive = API_FP_MM_SET_REGISTRATION_MODE_REQ, \
+							.RegistrationEnabled = true, .DeleteLastHandset = false};
+
+		printf("\nWRITE: API_FP_MM_SET_REGISTRATION_MODE_REQ\n");
+		busmail_send((uint8_t *)&r2, sizeof(ApiFpMmStartProtocolReqType), PF);
+
+
 		/* just ack the package */
 		/* busmail_ack(); */
 		
@@ -376,12 +384,6 @@ static void application_frame(busmail_t *m) {
 		free(r1);
 
 
-		/* Start registration */
-		ApiFpMmSetRegistrationModeReqType r2 = { .Primitive = API_FP_MM_SET_REGISTRATION_MODE_REQ, \
-							.RegistrationEnabled = true, .DeleteLastHandset = false};
-
-		printf("API_FP_MM_SET_REGISTRATION_MODE_REQ\n");
-		busmail_send((uint8_t *)&r2, sizeof(ApiFpMmStartProtocolReqType), PF);
 
 
 	case API_FP_MM_SET_REGISTRATION_MODE_CFM:
