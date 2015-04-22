@@ -53,6 +53,8 @@
 uint8_t tx_seq_l, rx_seq_l, tx_seq_r, rx_seq_r;
 
 int busmail_fd;
+int reset_ind = 0;
+
 
 static uint8_t * make_tx_packet(uint8_t * tx, void * packet, int data_size) {
   
@@ -104,6 +106,7 @@ static void unnumbered_control_frame(packet_t *p) {
 		rx_seq_l = 0;
 		tx_seq_r = 0;
 		rx_seq_r = 0;
+		reset_ind = 0;
 
 		printf("Reply SAMB_NO_POLL_SET. \n");
 		data = SAMB_NO_POLL_SET;
@@ -237,10 +240,7 @@ static void supervisory_control_frame(packet_t *p) {
 	pf = (m->frame_header & PF_MASK) >> PF_OFFSET;
 	suid = (m->frame_header & SUID_MASK) >> SUID_OFFSET;
 
-	printf("frame_header: %02x\n", m->frame_header);
-
 	packet_dump(p);
-
 	
 	switch (suid) {
 		
@@ -297,11 +297,15 @@ static void application_frame(busmail_t *m) {
 	case API_FP_RESET_IND:
 		printf("API_FP_RESET_IND\n");
 
+		if (reset_ind == 0) {
+			reset_ind = 1;
+			printf("\nWRITE: API_FP_GET_FW_VERSION_REQ\n");
+			ApiFpGetFwVersionReqType m1 = { .Primitive = API_FP_GET_FW_VERSION_REQ, };
+			busmail_send((uint8_t *)&m1, sizeof(ApiFpGetFwVersionReqType), PF);
 
-		printf("API_FP_GET_FW_VERSION_REQ\n");
-		ApiFpGetFwVersionReqType m1 = { .Primitive = API_FP_GET_FW_VERSION_REQ, };
-		busmail_send((uint8_t *)&m1, sizeof(ApiFpGetFwVersionReqType), PF);
-
+		} else {
+			busmail_ack();		
+		}
 
 
 		/* ApiFpCcFeaturesReqType * r = (ApiFpCcFeaturesReqType*) malloc(sizeof(ApiFpCcFeaturesReqType)); */
@@ -324,7 +328,7 @@ static void application_frame(busmail_t *m) {
 
 
 		/* setup default */
-		printf("API_FP_MM_EXT_HIGHER_LAYER_CAP2_REQ\n");
+		printf("\nWRITE: API_FP_MM_EXT_HIGHER_LAYER_CAP2_REQ\n");
 		ApiFpMmExtHigherLayerCap2ReqType* m2 = (ApiFpMmExtHigherLayerCap2ReqType*) \
 			malloc((sizeof(ApiFpMmExtHigherLayerCap2ReqType)));
 		m2->Primitive = API_FP_MM_EXT_HIGHER_LAYER_CAP2_REQ;
@@ -340,7 +344,7 @@ static void application_frame(busmail_t *m) {
 		ApiFpMmStartProtocolReqType * r = malloc(sizeof(ApiFpMmStartProtocolReqType));
 		r->Primitive = API_FP_MM_START_PROTOCOL_REQ;
 
-		printf("API_FP_MM_START_PROTOCOL_REQ\n");
+		printf("\nWRITE: API_FP_MM_START_PROTOCOL_REQ\n");
 		busmail_send((uint8_t *)r, sizeof(ApiFpMmStartProtocolReqType), PF);
 		free(r);
 
@@ -488,7 +492,7 @@ void packet_dump(packet_t *p) {
 	
 	int i;
 
-	printf("[PACKET %d] - ", p->size);
+	printf("\n[PACKET %d] - ", p->size);
 	for (i = 0; i < p->size; i++) {
 		printf("%02x ", p->data[i]);
 	}
@@ -524,7 +528,6 @@ void packet_dispatch(packet_t *p) {
 			break;
 
 		case SUPERVISORY_CONTROL_FRAME:
-			printf("SUPERVISORY_CONTROL_FRAME\n");
 			supervisory_control_frame(p);
 			break;
 		}
