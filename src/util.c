@@ -33,16 +33,16 @@ int check_args(int argc, char * argv[], config_t * c) {
 
 	/* Check arguments */
 	if (argc < 2) {
-		err_exit("Usage: %s <boot | prog>", argv[0]);
+		err_exit("Usage: %s <prog | app>", argv[0]);
 	}
 
 
 	/* Select operating mode */
-	if (strcmp("boot", argv[1]) == 0) {
-		c->mode = BOOT_MODE;
-		return 0;
-	} else if (strcmp("prog", argv[1]) == 0) {
+	if (strcmp("prog", argv[1]) == 0) {
 		c->mode = PROG_MODE;
+		return 0;
+	} else if (strcmp("app", argv[1]) == 0) {
+		c->mode = APP_MODE;
 		return 0;
 	} else {
 		return -1;

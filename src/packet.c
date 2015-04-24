@@ -12,7 +12,7 @@
 
 #include "error.h"
 #include "packet.h"
-#include "prog.h"
+#include "app.h"
 
 #define BUSMAIL_PACKET_HEADER 0x10
 #define BUSMAIL_HEADER_SIZE 3

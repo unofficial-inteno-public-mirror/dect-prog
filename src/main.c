@@ -12,7 +12,7 @@
 #include "boot.h"
 #include "state.h"
 #include "util.h"
-#include "prog.h"
+#include "app.h"
 
 
 
@@ -60,22 +60,20 @@ int main(int argc, char * argv[]) {
 	
 
 	/* Check user arguments and init config */
-	if (check_args(argc, argv, config) < 0) {
-		err_exit("Usage: %s <boot | prog>", argv[0]);
-	}
+	check_args(argc, argv, config);
 
 	/* Initial transition */
-	if (config->mode == BOOT_MODE) {
+	if (config->mode == PROG_MODE) {
 
 		/* Program new firmware */
 		state_add_handler(boot_state, dect_fd);
 		state_transition(BOOT_STATE);
 
-	} else if (config->mode == PROG_MODE) {
+	} else if (config->mode == APP_MODE) {
 
 		/* Firmware written, init firmware */
-		state_add_handler(prog_state, dect_fd);
-		state_transition(PROG_STATE);
+		state_add_handler(app_state, dect_fd);
+		state_transition(APP_STATE);
 
 	} else {
 		err_exit("No known operating mode selected\n");
