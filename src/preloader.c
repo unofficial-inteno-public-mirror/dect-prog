@@ -134,12 +134,12 @@ static void set_baudrate(event_t *e) {
 
 	uint8_t c[2];
 
-	c[0] = PRELOADER_BAUD_921600;
+	c[0] = PRELOADER_BAUD_230400;
 	
 	util_dump(c, 1, "[WRITE]");
 	write(e->fd, c, 1);
 
-	tty_set_baud(e->fd, B921600);
+	tty_set_baud(e->fd, B230400);
 	
 	c[0] = PRELOADER_NEW_BAUDRATE;
 	util_dump(c, 1, "[WRITE]");
