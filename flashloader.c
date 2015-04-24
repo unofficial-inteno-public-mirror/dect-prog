@@ -401,7 +401,7 @@ static void read_firmware(void) {
 	int fd;
 	struct stat s;
 
-	fd = open("target.bin", O_RDONLY);
+	fd = open("/etc/dect/target.bin", O_RDONLY);
 	if (fd == -1) {
 		perror("open");
 		exit(EXIT_FAILURE);
