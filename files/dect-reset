@@ -1,0 +1,2 @@
+brcm_fw_tool set -x 3 -p 1
+brcm_fw_tool set -x 3 -p 0
