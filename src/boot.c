@@ -107,10 +107,13 @@ static void send_ack(event_t *e) {
 void init_boot_state(int dect_fd) {
 	
 	printf("BOOT_STATE\n");
-
+	
 	read_preloader();
 	calculate_checksum();
-
+	
+	printf("RESET_DECT\n");
+	system("/usr/bin/dect-reset > /dev/null");
+	
 	tty_set_raw(dect_fd);
 	tty_set_baud(dect_fd, B19200);
 }
