@@ -649,7 +649,7 @@ void init_flashloader_state(int dect_fd) {
 
 void handle_flashloader_package(event_t *e) {
 
-	//util_dump(e->in, e->incount, "[READ]");
+	util_dump(e->in, e->incount, "[READ]");
 	
 	if (inspect_rx(e) < 0) {
 		printf("dropped packet\n");
