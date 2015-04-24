@@ -1,12 +1,7 @@
 
-#include <netinet/in.h>
-#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
-#include <event2/event.h>
-#include <event2/buffer.h>
-#include <event2/bufferevent.h>
 #include <assert.h>
 #include <unistd.h>
 #include <string.h>
