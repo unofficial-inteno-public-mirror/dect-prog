@@ -1,4 +1,4 @@
-STAGING_DIR=/home/jonash/projects/inteno/iopsys-dg301/staging_dir/target-mips_uClibc-0.9.33.2
+#STAGING_DIR=/home/jonash/projects/inteno/iopsys-dg301/staging_dir/target-mips_uClibc-0.9.33.2
 
 INCLUDE_PATHS = \
 		-I$(STAGING_DIR)/usr/include/natalie-dect/ \
