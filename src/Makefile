@@ -6,7 +6,7 @@ INCLUDE_PATHS = \
 
 
 all:
-	gcc $(INCLUDE_PATHS) -o dect-prog boot.c tty.c error.c main.c state.c util.c preloader.c flashloader.c Crc.c prog.c buffer.c packet.c
+	$(GCC) $(INCLUDE_PATHS) -o dect-prog boot.c tty.c error.c main.c state.c util.c preloader.c flashloader.c Crc.c prog.c buffer.c packet.c
 
 
 

@@ -2,6 +2,6 @@
 .PHONY: dect-prog
 
 dect-prog:
-	make -C src
+	$(MAKE) -C src
 	cp src/dect-prog .
 
