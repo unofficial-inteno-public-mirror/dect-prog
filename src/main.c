@@ -45,7 +45,7 @@ int main(int argc, char * argv[]) {
 		exit_failure("epoll_create\n");
 	}
 
-	dect_fd = open("/dev/ttyUSB1", O_RDWR);
+	dect_fd = open("/dev/ttyS1", O_RDWR);
 	if (dect_fd == -1) {
 		exit_failure("open\n");
 	}
