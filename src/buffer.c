@@ -54,6 +54,18 @@ int buffer_read(buffer_t * self, uint8_t *buf, int count) {
 	return count;
 }
 
+
+int buffer_rewind(buffer_t * self, int count) {
+	
+	/* Don't rewind beyond start of buffer */
+	if ( self->cursor - count < 0 ) {
+		self->cursor = 0;
+	} else {
+		self->cursor -= count;
+	}
+}
+
+
 int buffer_find(buffer_t * self, uint8_t c) {
 	
 	int i;

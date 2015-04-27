@@ -14,5 +14,6 @@ typedef struct {
 buffer_t * buffer_new(int size);
 int buffer_add(buffer_t * self, uint8_t *input, int count);
 int buffer_dump(buffer_t * self);
+int buffer_rewind(buffer_t * self, int count);
 
 #endif /* BUFFER_H */

@@ -312,13 +312,13 @@ static void sw_version_req(int fd) {
 }
 
 
-static void sw_version_cfm(event_t *e) {
+static void sw_version_cfm(packet_t *p) {
   
-	SwVersionCfmType *p = (SwVersionCfmType *) &e->in[3];
+	SwVersionCfmType *m = (SwVersionCfmType *) &p->data[0];
 
-	printf("version: %d\n", p->Version);
-	printf("revision: %d\n", p->Revision);
-	printf("flashloader id: %d\n", p->FlashLoaderId);
+	printf("version: %d\n", m->Version);
+	printf("revision: %d\n", m->Revision);
+	printf("flashloader id: %d\n", m->FlashLoaderId);
 	
 }
 
@@ -634,59 +634,53 @@ void flashloader_dispatch(packet_t *p) {
 
   	packet_dump(p);
 
-	return;
-  
-	/* if (inspect_rx(e) < 0) { */
-	/* 	printf("dropped packet\n"); */
-	/* }  */
+	switch (p->data[0]) {
 
-	/* switch (e->in[3]) { */
-
-	/* case READ_SW_VERSION_CFM: */
-	/* 	printf("READ_SW_VERSION_CFM\n"); */
-	/* 	sw_version_cfm(e); */
-	/* 	printf("WRITE_CONFIG_REQ\n"); */
-	/* 	config_target(e); */
-	/* 	break; */
+	case READ_SW_VERSION_CFM:
+		printf("READ_SW_VERSION_CFM\n");
+		sw_version_cfm(p);
+		printf("WRITE_CONFIG_REQ\n");
+		config_target(p);
+		break;
 		
-	/* case WRITE_CONFIG_CFM: */
-	/* 	printf("WRITE_CONFIG_CFM\n"); */
-	/* 	write_config_cfm(e); */
-	/* 	printf("READ_PROPRIETARY_DATA_REQ\n"); */
-	/* 	qspi_flash_type_req(e); */
-	/* 	break; */
+	case WRITE_CONFIG_CFM:
+		printf("WRITE_CONFIG_CFM\n");
+		write_config_cfm(p);
+		printf("READ_PROPRIETARY_DATA_REQ\n");
+		qspi_flash_type_req(p);
+		break;
 
-	/* case READ_PROPRIETARY_DATA_CFM: */
-	/* 	printf("READ_PROPRIETARY_DATA_CFM\n"); */
-	/* 	qspi_flash_type_cfm(e); */
+	case READ_PROPRIETARY_DATA_CFM:
+		printf("READ_PROPRIETARY_DATA_CFM\n");
+		qspi_flash_type_cfm(p);
 		
-	/* 	/\* Erase flash *\/ */
-	/* 	printf("FLASH_ERASE_REQ\n"); */
-	/* 	erase_flash(e); */
+		/* Erase flash */
+		printf("FLASH_ERASE_REQ\n");
+		erase_flash(p);
 
-	/* 	break; */
+		break;
 
-	/* case FLASH_ERASE_CFM: */
-	/* 	printf("FLASH_ERASE_CFM\n"); */
-	/* 	flash_erase_cfm(e); */
+	case FLASH_ERASE_CFM:
+		printf("FLASH_ERASE_CFM\n");
+		flash_erase_cfm(p);
 
-	/* 	/\* Progam flash *\/ */
-	/* 	program_flash(e); */
-	/* 	break; */
+		/* Progam flash */
+		program_flash(p);
+		break;
 
-	/* case PROG_FLASH_CFM: */
-	/* 	prog_flash_cfm(e); */
-	/* 	break; */
+	case PROG_FLASH_CFM:
+		prog_flash_cfm(p);
+		break;
 
-	/* case CALC_CRC32_CFM: */
-	/* 	calc_crc32_cfm(e); */
-	/* 	break; */
+	case CALC_CRC32_CFM:
+		calc_crc32_cfm(p);
+		break;
 
 
-	/* default: */
-	/* 	printf("Unknown flashloader packet: %x\n", e->in[0]); */
-	/* 	break; */
-	/* } */
+	default:
+		printf("Unknown flashloader packet: %x\n", p->data[0]);
+		break;
+	}
 
 }
 
@@ -713,6 +707,7 @@ int flashpacket_get(packet_t *p, buffer_t *b) {
 
 	/* Do we have a full header? */
 	if (buffer_size(b) < 2) {
+		buffer_rewind(b, 1);
 		return -1;
 	}
 	buffer_read(b, buf + 1, 2);
@@ -722,6 +717,7 @@ int flashpacket_get(packet_t *p, buffer_t *b) {
 
 	/* Do we have a full packet? */
 	if (2 + size > buffer_size(b)) {
+		buffer_rewind(b, 3);
 		return -1;
 	}
 	buffer_read(b, buf + 3, size + 2);
