@@ -3,5 +3,4 @@
 
 dect-prog:
 	$(MAKE) -C src
-	cp src/dect-prog .
 
