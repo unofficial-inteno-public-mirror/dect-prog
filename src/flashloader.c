@@ -14,13 +14,14 @@
 #include <termios.h>
 
 
-#include "dect.h"
 #include "tty.h"
 #include "error.h"
 #include "state.h"
 #include "boot.h"
 #include "util.h"
+#include "buffer.h"
 #include "preloader.h"
+#include "packet.h"
 
 #include "MRtxDef.h"
 #include "MailDef.h"
@@ -123,25 +124,7 @@ int fl_state;
 uint8_t packetbuf[BUF_SIZE];
 int sectors, mod, sectors_written;
 
-
-/* CommonFlashMemoryInterfaceType   MyCfi; */
-
-
- /* case SC14441_EXT_QSPI_FLASH_BMC: */
- /* { */
- /* 	 ReadQSPIFlashTypeCfmType  QSPIFlash; */
- /* 	 ReadQSPiFlashType(InstanceData, &QSPIFlash); */
- /* 	 Cfi->FlashID          = EXTERNAL_QSPI_FLASH_ID; */
- /* 	 Cfi->MinBlockSize     = QSPIFlash.SectorSize; */
- /* 	 Cfi->MemorySize       = DataOptions->Size; */
- /* 	 Cfi->FlashStartAddress= StartAddress; */
- /* 	 Cfi->ChipEraseCmd     = 0x10; */
- /* 	 Cfi->SectorEraseCmd   = 0x30; */
- /* 	 return(Err); */
- /* } */
-
-
-
+buffer_t * buf;
 
 
 
@@ -642,68 +625,156 @@ void init_flashloader_state(int dect_fd) {
 	read_firmware();
 	calculate_checksum();
 
+	buf = buffer_new(500);
 }
 
+
+
+void flashloader_dispatch(packet_t *p) {
+
+  	packet_dump(p);
+
+	return;
+  
+	/* if (inspect_rx(e) < 0) { */
+	/* 	printf("dropped packet\n"); */
+	/* }  */
+
+	/* switch (e->in[3]) { */
+
+	/* case READ_SW_VERSION_CFM: */
+	/* 	printf("READ_SW_VERSION_CFM\n"); */
+	/* 	sw_version_cfm(e); */
+	/* 	printf("WRITE_CONFIG_REQ\n"); */
+	/* 	config_target(e); */
+	/* 	break; */
+		
+	/* case WRITE_CONFIG_CFM: */
+	/* 	printf("WRITE_CONFIG_CFM\n"); */
+	/* 	write_config_cfm(e); */
+	/* 	printf("READ_PROPRIETARY_DATA_REQ\n"); */
+	/* 	qspi_flash_type_req(e); */
+	/* 	break; */
+
+	/* case READ_PROPRIETARY_DATA_CFM: */
+	/* 	printf("READ_PROPRIETARY_DATA_CFM\n"); */
+	/* 	qspi_flash_type_cfm(e); */
+		
+	/* 	/\* Erase flash *\/ */
+	/* 	printf("FLASH_ERASE_REQ\n"); */
+	/* 	erase_flash(e); */
+
+	/* 	break; */
+
+	/* case FLASH_ERASE_CFM: */
+	/* 	printf("FLASH_ERASE_CFM\n"); */
+	/* 	flash_erase_cfm(e); */
+
+	/* 	/\* Progam flash *\/ */
+	/* 	program_flash(e); */
+	/* 	break; */
+
+	/* case PROG_FLASH_CFM: */
+	/* 	prog_flash_cfm(e); */
+	/* 	break; */
+
+	/* case CALC_CRC32_CFM: */
+	/* 	calc_crc32_cfm(e); */
+	/* 	break; */
+
+
+	/* default: */
+	/* 	printf("Unknown flashloader packet: %x\n", e->in[0]); */
+	/* 	break; */
+	/* } */
+
+}
+
+
+
+int flashpacket_get(packet_t *p, buffer_t *b) {
+	
+	int i, start, stop, size;
+	uint16_t crc = 0, crc_calc = 0;
+	uint8_t buf[5000];
+
+	/* start = buffer_find(b, BUSMAIL_PACKET_HEADER); */
+	/* if (start < 0) { */
+	/* 	return -1; */
+	/* } */
+
+
+	/* Do we have a start of frame? */	
+	while (buffer_read(b, buf, 1) > 0) {
+		if (buf[0] == UART_PACKET_HEADER) {
+			break;
+		}
+	}
+
+	/* Do we have a full header? */
+	if (buffer_size(b) < 2) {
+		return -1;
+	}
+	buffer_read(b, buf + 1, 2);
+
+	/* Packet size */
+	size = (((uint32_t) buf[2] << 8) | buf[1]);
+
+	/* Do we have a full packet? */
+	if (2 + size > buffer_size(b)) {
+		return -1;
+	}
+	buffer_read(b, buf + 3, size + 2);
+	
+	/* Read packet checksum */
+	crc = ( ((buf[PACKET_OVER_HEAD + size - 1]) << 8) | (buf[PACKET_OVER_HEAD + size - 2]) );
+
+	/* Calculate checksum over data portion */
+	for (i = 0; i < size; i++) {
+		crc_calc = UpdateCrc(buf[i + 3], crc_calc);
+	}
+
+	if (crc != crc_calc) {
+		printf("Drop packet: bad packet checksum: %x != %x\n", crc, crc_calc);
+		return -1;
+	}
+
+	/* Copy data portion to packet */
+	memcpy(p->data, buf + 3, size);
+	p->size = size;
+
+	return 0;
+}
 
 
 
 void handle_flashloader_package(event_t *e) {
 
-	util_dump(e->in, e->incount, "[READ]");
-	
-	if (inspect_rx(e) < 0) {
-		printf("dropped packet\n");
-	} 
+	uint8_t header;
+	packet_t packet;
+	packet_t *p = &packet;
+	p->fd = e->fd;
+	p->size = 0;
 
-	switch (e->in[3]) {
+	util_dump(e->in, e->incount, "\n[READ]");
 
-	case READ_SW_VERSION_CFM:
-		printf("READ_SW_VERSION_CFM\n");
-		sw_version_cfm(e);
-		printf("WRITE_CONFIG_REQ\n");
-		config_target(e);
-		break;
-		
-	case WRITE_CONFIG_CFM:
-		printf("WRITE_CONFIG_CFM\n");
-		write_config_cfm(e);
-		printf("READ_PROPRIETARY_DATA_REQ\n");
-		qspi_flash_type_req(e);
-		break;
-
-	case READ_PROPRIETARY_DATA_CFM:
-		printf("READ_PROPRIETARY_DATA_CFM\n");
-		qspi_flash_type_cfm(e);
-		
-		/* Erase flash */
-		printf("FLASH_ERASE_REQ\n");
-		erase_flash(e);
-
-		break;
-
-	case FLASH_ERASE_CFM:
-		printf("FLASH_ERASE_CFM\n");
-		flash_erase_cfm(e);
-
-		/* Progam flash */
-		program_flash(e);
-		break;
-
-	case PROG_FLASH_CFM:
-		prog_flash_cfm(e);
-		break;
-
-	case CALC_CRC32_CFM:
-		calc_crc32_cfm(e);
-		break;
-
-
-	default:
-		printf("Unknown flashloader packet: %x\n", e->in[0]);
-		break;
+	/* Add input to buffer */
+	if (buffer_write(buf, e->in, e->incount) == 0) {
+		printf("buffer full\n");
 	}
+	
+	//buffer_dump(buf);
+	
+	/* Process whole packets in buffer */
 
+	while(flashpacket_get(p, buf) == 0) {
+		flashloader_dispatch(p);
+	}
 }
+
+
+
+
 
 
 
