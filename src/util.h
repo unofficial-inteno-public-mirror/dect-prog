@@ -1,3 +1,6 @@
+#ifndef UTIL_H
+#define UTIL_H
+
 #include <stdint.h>
 
 void util_dump(unsigned char *buf, int size, char *start);
@@ -16,3 +19,5 @@ typedef struct {
 	uint32_t mode;
 } config_t;
 
+
+#endif /* UTIL_H */
