@@ -576,8 +576,10 @@ static void calc_crc32_cfm(packet_t *p) {
 
 	if (m->Crc32 == pr->checksum) {
 		printf("Checksum (0x%x) ok!\n", m->Crc32);
+		exit(0);
 	} else {
 		printf("Bad checksum! 0x%x != 0x%x\n", m->Crc32, pr->checksum);
+		exit(-1);
 	}
 
 }
@@ -632,7 +634,7 @@ void init_flashloader_state(int dect_fd) {
 
 void flashloader_dispatch(packet_t *p) {
 
-  	packet_dump(p);
+  	//packet_dump(p);
 
 	switch (p->data[0]) {
 
@@ -752,7 +754,7 @@ void handle_flashloader_package(event_t *e) {
 	p->fd = e->fd;
 	p->size = 0;
 
-	util_dump(e->in, e->incount, "\n[READ]");
+	//util_dump(e->in, e->incount, "\n[READ]");
 
 	/* Add input to buffer */
 	if (buffer_write(buf, e->in, e->incount) == 0) {
