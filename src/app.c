@@ -42,6 +42,9 @@ void init_app_state(int dect_fd) {
 	tty_set_raw(dect_fd);
 	tty_set_baud(dect_fd, B115200);
 
+	printf("RESET_DECT\n");
+	system("/usr/bin/dect-reset > /dev/null");
+
 	/* Init input buffer */
 	buf = buffer_new(500);
 	

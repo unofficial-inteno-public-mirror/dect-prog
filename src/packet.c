@@ -456,6 +456,7 @@ int packet_get(packet_t *p, buffer_t *b) {
 
 	/* Do we have a full header? */
 	if (buffer_size(b) < 2) {
+		buffer_rewind(b, 1);
 		return -1;
 	}
 	buffer_read(b, buf + 1, 2);
@@ -464,7 +465,9 @@ int packet_get(packet_t *p, buffer_t *b) {
 	size = (((uint32_t) buf[1] << 8) | buf[2]);
 	
 	/* Do we have a full packet? */
-	if (BUSMAIL_PACKET_OVER_HEAD + size >= b->count - start) {
+	/* Data + crc */
+	if (1 + size > buffer_size(b)) {
+		buffer_rewind(b, 3);
 		return -1;
 	}
 	buffer_read(b, buf + 3, size + 1);
