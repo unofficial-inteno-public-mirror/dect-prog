@@ -324,22 +324,22 @@ static void sw_version_cfm(packet_t *p) {
 
 
 
-static void qspi_flash_type_req(event_t *e) {
+static void qspi_flash_type_req(packet_t *p) {
 
 	ReadProprietaryDataReqType *r = malloc(sizeof(ReadProprietaryDataReqType));
   
 	r->Primitive = READ_PROPRIETARY_DATA_REQ;
 	r->RequestID = 0;
 
-	send_packet(r, sizeof(ReadProprietaryDataReqType), e->fd);
+	send_packet(r, sizeof(ReadProprietaryDataReqType), p->fd);
 	free(r);
 
 }
 
 
-static void qspi_flash_type_cfm(event_t *e) {
+static void qspi_flash_type_cfm(packet_t *p) {
 
-	memcpy(f, &(e->in[3]), sizeof(flash_type_t));
+	memcpy(f, &(p->data[0]), sizeof(flash_type_t));
 
 	printf("Primitive: %x\n", f->Primitive);
 	printf("RequestId: %x\n", f->RequestID);
@@ -369,11 +369,11 @@ static void config_target(event_t *e) {
 }
 
 
-static void write_config_cfm(event_t *e) {
+static void write_config_cfm(packet_t *p) {
 	
-	write_config_cfm_t *p = (write_config_cfm_t *) &e->in[3];
+	write_config_cfm_t *m = (write_config_cfm_t *) &p->data[0];
 	
-	if(p->Confirm == TRUE) {
+	if(m->Confirm == TRUE) {
 		printf("Confirm: TRUE\n");
 	}
 
@@ -423,27 +423,27 @@ static void read_firmware(void) {
 
 
 
-static void erase_flash_req(event_t *e, int address) {
+static void erase_flash_req(packet_t *p, int address) {
 	
-	erase_flash_req_t *p = malloc(sizeof(erase_flash_req_t));
+	erase_flash_req_t *m = malloc(sizeof(erase_flash_req_t));
 	
-	p->Primitive = FLASH_ERASE_REQ;
-	p->Address = address;
-	p->EraseCommand = CHIP_ERASE_CMD;
+	m->Primitive = FLASH_ERASE_REQ;
+	m->Address = address;
+	m->EraseCommand = CHIP_ERASE_CMD;
 
-	send_packet(p, sizeof(erase_flash_req_t), e->fd);
-	free(p);
+	send_packet(m, sizeof(erase_flash_req_t), p->fd);
+	free(m);
 }
 
 
-static void flash_erase_cfm(event_t *e) {
+static void flash_erase_cfm(packet_t *p) {
 	
-	erase_flash_cfm_t  *p = (erase_flash_cfm_t *) &e->in[3];
-	printf("Address: 0x%x\n", p->Address);
-	printf("Confirm: 0x%x\n", p->Confirm);
+	erase_flash_cfm_t  *m = (erase_flash_cfm_t *) &p->data[0];
+	printf("Address: 0x%x\n", m->Address);
+	printf("Confirm: 0x%x\n", m->Confirm);
 	
 	  
-	if(p->Confirm == TRUE) {
+	if(m->Confirm == TRUE) {
 		/* sectors_written++; */
 
 		/* if (sectors_written < sectors) { */
@@ -464,7 +464,7 @@ static void flash_erase_cfm(event_t *e) {
 }
 
 
-static void erase_flash(event_t *e) {
+static void erase_flash(packet_t *p) {
 	
 	int mod, i;
 
@@ -480,7 +480,7 @@ static void erase_flash(event_t *e) {
 	printf("Erasing flash\n");
 	/* Erase first sector */
 	sectors_written = 0;
-	erase_flash_req(e, 0);
+	erase_flash_req(p, 0);
 
 }
 
@@ -496,10 +496,10 @@ static int is_data_ff(uint8_t *data) {
 	return 1;
 }
 
-static void prog_flash_req(event_t *e, int offset) {
+static void prog_flash_req(packet_t *p, int offset) {
 
 	int i;
-	prog_flash_t * p = malloc(sizeof(prog_flash_t) + 2048 - 2);
+	prog_flash_t * m = malloc(sizeof(prog_flash_t) + 2048 - 2);
 	uint8_t *data = pr->img + offset;
 	int of = offset;
 	int data_size = 2048;
@@ -521,71 +521,71 @@ static void prog_flash_req(event_t *e, int offset) {
 			data_size++;
 		}
 		
-		p->Length = data_size / 2;
-		memcpy(p->Data, data, data_size);
+		m->Length = data_size / 2;
+		memcpy(m->Data, data, data_size);
 	} else {
-		p->Length = data_size / 2;
-		memcpy(p->Data, data, data_size);
+		m->Length = data_size / 2;
+		memcpy(m->Data, data, data_size);
 	}
 	
-	p->Primitive = PROG_FLASH_REQ;
-	p->Address = of;
+	m->Primitive = PROG_FLASH_REQ;
+	m->Address = of;
 	
 	/* printf("Address: 0x%x\n", p->Address); */
 	/* printf("Length: 0x%x\n", p->Length); */
 	
-	send_packet_quiet(p, sizeof(prog_flash_t) + data_size - 2, e->fd);
-	free(p);
+	send_packet_quiet(m, sizeof(prog_flash_t) + data_size - 2, p->fd);
+	free(m);
 
 }
 
 
-static void program_flash(event_t *e) {
+static void program_flash(packet_t *p) {
 	
 	printf("program flash\n");
-	prog_flash_req(e, 0);
+	prog_flash_req(p, 0);
 }
 
 
-static void calc_crc32_req(event_t *e) {
+static void calc_crc32_req(packet_t *p) {
 
-	calc_crc32_req_t * p = (calc_crc32_req_t *) malloc(sizeof(calc_crc32_req_t));
+	calc_crc32_req_t * m = (calc_crc32_req_t *) malloc(sizeof(calc_crc32_req_t));
 
-	p->Primitive = CALC_CRC32_REQ;
-	p->Address = 0;
-	p->Length = pr->size;
+	m->Primitive = CALC_CRC32_REQ;
+	m->Address = 0;
+	m->Length = pr->size;
 	
 	printf("CALC_CRC32_REQ\n");
-	printf("p->Address: %x\n", p->Address);
-	printf("p->Length: %x\n", p->Length);
+	printf("m->Address: %x\n", m->Address);
+	printf("m->Length: %x\n", m->Length);
 
-	send_packet(p, sizeof(calc_crc32_req_t), e->fd);
-	free(p);
+	send_packet(m, sizeof(calc_crc32_req_t), p->fd);
+	free(m);
 
 }
 
 
-static void calc_crc32_cfm(event_t *e) {
+static void calc_crc32_cfm(packet_t *p) {
 
-	calc_crc32_cfm_t * p = (calc_crc32_cfm_t *) &e->in[3];
+	calc_crc32_cfm_t * m = (calc_crc32_cfm_t *) &p->data[0];
 
 	printf("CALC_CRC32_CFM\n");	
-	printf("p->Address: %x\n", p->Address);
-	printf("p->Length: %x\n", p->Length);
-	printf("p->Crc32: %x\n", p->Crc32);
+	printf("m->Address: %x\n", m->Address);
+	printf("m->Length: %x\n", m->Length);
+	printf("m->Crc32: %x\n", m->Crc32);
 
-	if (p->Crc32 == pr->checksum) {
-		printf("Checksum (0x%x) ok!\n", p->Crc32);
+	if (m->Crc32 == pr->checksum) {
+		printf("Checksum (0x%x) ok!\n", m->Crc32);
 	} else {
-		printf("Bad checksum! 0x%x != 0x%x\n", p->Crc32, pr->checksum);
+		printf("Bad checksum! 0x%x != 0x%x\n", m->Crc32, pr->checksum);
 	}
 
 }
 
 
-static void prog_flash_cfm(event_t *e) {
+static void prog_flash_cfm(packet_t *p) {
 	
-	prog_flash_cfm_t * p = (prog_flash_cfm_t *) &e->in[3];
+	prog_flash_cfm_t * m = (prog_flash_cfm_t *) &p->data[0];
 
 
 	/* printf("FLASH_PROG_REQ\n"); */
@@ -594,19 +594,19 @@ static void prog_flash_cfm(event_t *e) {
 	/* printf("Confirm: 0x%x\n", p->Confirm); */
 
 	
-	if (p->Confirm == TRUE) {
+	if (m->Confirm == TRUE) {
 		printf(".");
 		
-		if ((p->Address + 0x800) < pr->size) {
-			prog_flash_req(e, p->Address + 0x800);
+		if ((m->Address + 0x800) < pr->size) {
+			prog_flash_req(p, m->Address + 0x800);
 		} else {
 			printf("\ndone programming\n");
-			calc_crc32_req(e);
+			calc_crc32_req(p);
 		}
 
 	} else {
 		printf("FALSE\n");
-		prog_flash_req(e, p->Address + 0);
+		prog_flash_req(p, m->Address + 0);
 	}
 	
 	
@@ -625,7 +625,7 @@ void init_flashloader_state(int dect_fd) {
 	read_firmware();
 	calculate_checksum();
 
-	buf = buffer_new(500);
+	buf = buffer_new(5000);
 }
 
 
