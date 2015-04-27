@@ -115,12 +115,8 @@ static void send_size(event_t *e) {
 
 static void send_flashloader(event_t *e) {
   
-	/* memcpy(e->out, pr->img, pr->size); */
-	/* e->outcount = pr->size; */
-
-	util_dump(pr->img, pr->size, "[WRITE]");
+	printf("WRITE_FLASHLOADER: %d\n", pr->size);
 	write(e->fd, pr->img, pr->size);
-
 }
 
 static void send_start(event_t *e) {

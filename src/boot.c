@@ -88,8 +88,8 @@ static void send_size(event_t *e) {
 
 static void send_preloader(event_t *e) {
   
-	memcpy(e->out, pr->img, pr->size);
-	e->outcount = pr->size;
+	printf("WRITE_PRELOADER\n");
+	write(e->fd, pr->img, pr->size);
 }
 
 static void send_ack(event_t *e) {
