@@ -6,7 +6,8 @@
 #include <Api/FpGeneral/ApiFpGeneral.h>
 #include <Api/FpCc/ApiFpCc.h>
 #include <Api/FpMm/ApiFpMm.h>
-
+#include <Api/ProdTest/ApiProdTest.h>
+#include <Api/ProdTest/ApiProdTest.h>
 #include <RosPrimitiv.h>
 #include <Api/RsStandard.h>
 
@@ -219,6 +220,42 @@ static busmail_send(uint8_t * data, int size, uint8_t pf) {
 }
 
 
+static busmail_send0(uint8_t * data, int size, uint8_t pf) {
+
+	uint8_t tx_seq_tmp, rx_seq_tmp;
+	busmail_t * r;	
+
+	r = malloc(BUSMAIL_PACKET_OVER_HEAD - 1 + size);
+	if (!r) {
+		exit_failure("malloc");
+	}
+
+		
+	r->frame_header = make_info_frame(pf);
+	r->program_id = API_PROG_ID;
+	r->task_id = 0;
+	memcpy(&(r->mail_header), data, size);
+
+	tx_seq_tmp = (r->frame_header & TX_SEQ_MASK) >> TX_SEQ_OFFSET;
+	rx_seq_tmp = (r->frame_header & RX_SEQ_MASK) >> RX_SEQ_OFFSET;
+
+	printf("BUSMAIL_SEND_INFO\n");
+	printf("tx_seq_l: %d\n", tx_seq_l);
+	printf("rx_seq_l: %d\n", rx_seq_l);
+	printf("pf: %d\n", pf);
+
+	printf("frame_header: %x\n", (r->frame_header));
+	
+	send_packet(r, BUSMAIL_PACKET_OVER_HEAD - 1 + size, busmail_fd);
+	free(r);
+	
+	/* Update packet counter */
+	tx_seq_l++;
+
+}
+
+
+
 static busmail_ack(void) {
 
 	uint8_t sh, rx_seq_tmp;
@@ -285,8 +322,13 @@ static void fw_version_cfm(busmail_t *m) {
 
 }
 
-
-
+#define PT_CMD_NVS_DEFAULT 0x0102
+/*
+  #define PT_CMD_NVS_DEFAULT 0x0102
+  /// \ref PT_CMD_NVS_DEFAULT REQ parameter type.                                                                                                    typedef struct
+  {
+  rsbool FactoryDefault; //!< TRUE(1) defaults the adjustment parameters (factory settings); FALSE(0): preserves the adjustment parameters.          } PtNvsDefaultReqType;
+*/
 
 static void application_frame(busmail_t *m) {
 	
@@ -299,6 +341,14 @@ static void application_frame(busmail_t *m) {
 
 		if (reset_ind == 0) {
 			reset_ind = 1;
+
+			/* printf("\nWRITE: API_FP_GET_FW_VERSION_REQ\n"); */
+			/* ApiFpGetFwVersionReqType m1 = { .Primitive = API_FP_GET_FW_VERSION_REQ, }; */
+			/* busmail_send((uint8_t *)&m1, sizeof(ApiFpGetFwVersionReqType), PF); */
+			/* ApiProdTestReqType m1 = { .Primitive = RTX_EAP_HW_TEST_REQ, .Opcode = PT_CMD_NVS_DEFAULT, .ParameterLength = 1, .Parameters[0] = 1, }; */
+
+			
+
 			printf("\nWRITE: API_FP_GET_FW_VERSION_REQ\n");
 			ApiFpGetFwVersionReqType m1 = { .Primitive = API_FP_GET_FW_VERSION_REQ, };
 			busmail_send((uint8_t *)&m1, sizeof(ApiFpGetFwVersionReqType), PF);
@@ -321,43 +371,63 @@ static void application_frame(busmail_t *m) {
 
 		break;
 
+	case API_PROD_TEST_CFM:
+		printf("API_PROD_TEST_CFM\n");
+		busmail_ack();
+		break;
+
+	case RTX_EAP_HW_TEST_CFM:
+		printf("RTX_EAP_HW_TEST_CFM\n");
+		busmail_ack();
+		break;
 
 	case API_FP_GET_FW_VERSION_CFM:
 		printf("API_FP_GET_FW_VERSION_CFM\n");
 		fw_version_cfm(m);
 
+		/* printf("\nWRITE: NvsDefault\n"); */
+		/* uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x02, 0x01, 0x01, 0x00, 0x01}; */
+		/* busmail_send0(data, sizeof(data), PF); */
 
-		/* setup default */
-		printf("\nWRITE: API_FP_MM_EXT_HIGHER_LAYER_CAP2_REQ\n");
-		ApiFpMmExtHigherLayerCap2ReqType* m2 = (ApiFpMmExtHigherLayerCap2ReqType*) \
-			malloc((sizeof(ApiFpMmExtHigherLayerCap2ReqType)));
-		m2->Primitive = API_FP_MM_EXT_HIGHER_LAYER_CAP2_REQ;
-		m2->FpCapBit24_31 = 0x84;
-		m2->FpCapBit32_39 = 0x24; /* no_emmision == 0 */
-		m2->FpCapBit40_47 = 0;
-		busmail_send((uint8_t *)m2, sizeof(ApiFpMmExtHigherLayerCap2ReqType), PF);
-		free(m2);
+
+		printf("\nWRITE: GetId\n");
+		uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x1c, 0x00, 0x00, 0x00};
+		busmail_send0(data, sizeof(data), PF);
 
 
 
-		/* /\* Start protocol *\/ */
-		ApiFpMmStartProtocolReqType * r = malloc(sizeof(ApiFpMmStartProtocolReqType));
-		r->Primitive = API_FP_MM_START_PROTOCOL_REQ;
 
-		printf("\nWRITE: API_FP_MM_START_PROTOCOL_REQ\n");
-		busmail_send((uint8_t *)r, sizeof(ApiFpMmStartProtocolReqType), PF);
-		free(r);
-
-
-		/* Start registration */
-		ApiFpMmSetRegistrationModeReqType r2 = { .Primitive = API_FP_MM_SET_REGISTRATION_MODE_REQ, \
-							.RegistrationEnabled = true, .DeleteLastHandset = false};
-
-		printf("\nWRITE: API_FP_MM_SET_REGISTRATION_MODE_REQ\n");
-		busmail_send((uint8_t *)&r2, sizeof(ApiFpMmStartProtocolReqType), PF);
+		/* /\* setup default *\/ */
+		/* printf("\nWRITE: API_FP_MM_EXT_HIGHER_LAYER_CAP2_REQ\n"); */
+		/* ApiFpMmExtHigherLayerCap2ReqType* m2 = (ApiFpMmExtHigherLayerCap2ReqType*) \ */
+		/* 	malloc((sizeof(ApiFpMmExtHigherLayerCap2ReqType))); */
+		/* m2->Primitive = API_FP_MM_EXT_HIGHER_LAYER_CAP2_REQ; */
+		/* m2->FpCapBit24_31 = 0x84; */
+		/* m2->FpCapBit32_39 = 0x24; /\* no_emmision == 0 *\/ */
+		/* m2->FpCapBit40_47 = 0; */
+		/* busmail_send((uint8_t *)m2, sizeof(ApiFpMmExtHigherLayerCap2ReqType), PF); */
+		/* free(m2); */
 
 
-		/* just ack the package */
+
+		/* /\* /\\* Start protocol *\\/ *\/ */
+		/* ApiFpMmStartProtocolReqType * r = malloc(sizeof(ApiFpMmStartProtocolReqType)); */
+		/* r->Primitive = API_FP_MM_START_PROTOCOL_REQ; */
+
+		/* printf("\nWRITE: API_FP_MM_START_PROTOCOL_REQ\n"); */
+		/* busmail_send((uint8_t *)r, sizeof(ApiFpMmStartProtocolReqType), PF); */
+		/* free(r); */
+
+
+		/* /\* Start registration *\/ */
+		/* ApiFpMmSetRegistrationModeReqType r2 = { .Primitive = API_FP_MM_SET_REGISTRATION_MODE_REQ, \ */
+		/* 					.RegistrationEnabled = true, .DeleteLastHandset = false}; */
+
+		/* printf("\nWRITE: API_FP_MM_SET_REGISTRATION_MODE_REQ\n"); */
+		/* busmail_send((uint8_t *)&r2, sizeof(ApiFpMmStartProtocolReqType), PF); */
+
+
+		/* /\* just ack the package *\/ */
 		/* busmail_ack(); */
 		
 		break;
@@ -406,9 +476,9 @@ static void information_frame(packet_t *p) {
 	
 
 	/* Drop unwanted frames */
-	if( m->program_id != API_PROG_ID ) {
-		return;
-	}
+	/* if( m->program_id != API_PROG_ID ) { */
+	/* 	return; */
+	/* } */
 
 	packet_dump(p);
 	
