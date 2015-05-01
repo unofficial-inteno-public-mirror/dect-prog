@@ -30,5 +30,7 @@ typedef struct __attribute__((__packed__))
 int busmail_get(packet_t *p, buffer_t *b);
 void packet_dump(packet_t *p);
 void busmail_dispatch(packet_t *p);
+void busmail_send0(uint8_t * data, int size, uint8_t pf);
+void busmail_send(uint8_t * data, int size, uint8_t pf);
 
 #endif /* BUSMAIL_H */

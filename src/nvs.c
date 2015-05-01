@@ -61,7 +61,7 @@ static void application_frame(busmail_t *m) {
 	switch (m->mail_header) {
 		
 	case API_FP_RESET_IND:
-		printf("API_FP_RESET_IND NVS\n");
+		printf("API_FP_RESET_IND\n");
 		
 
 		if (reset_ind == 0) {
@@ -77,11 +77,6 @@ static void application_frame(busmail_t *m) {
 
 		break;
 
-	case API_PROD_TEST_CFM:
-		printf("API_PROD_TEST_CFM\n");
-		busmail_ack();
-		break;
-
 	case RTX_EAP_HW_TEST_CFM:
 		printf("RTX_EAP_HW_TEST_CFM\n");
 		busmail_ack();
@@ -91,9 +86,15 @@ static void application_frame(busmail_t *m) {
 		printf("API_FP_GET_FW_VERSION_CFM\n");
 		fw_version_cfm(m);
 
-		/* printf("\nWRITE: NvsDefault\n"); */
-		/* uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x02, 0x01, 0x01, 0x00, 0x01}; */
-		/* busmail_send0(data, sizeof(data), PF); */
+
+		/* printf("Get NVS\n"); */
+		/* uint8_t data1[] = {0x66, 0xf0, 0x00, 0x00, 0x01, 0x01, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff}; */
+		/* busmail_send0(data1, sizeof(data1), PF); */
+
+
+		printf("\nWRITE: NvsDefault\n");
+		uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x02, 0x01, 0x01, 0x00, 0x01};
+		busmail_send0(data, sizeof(data), PF);
 
 
 		/* printf("\nWRITE: GetId\n"); */
@@ -121,21 +122,6 @@ static void application_frame(busmail_t *m) {
 		/* uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x00, 0x30, 0x00, 0x00 }; */
 		/* busmail_send0(data, sizeof(data), PF); */
 
-
-		/* Start protocol */
-		printf("\nWRITE: API_FP_MM_START_PROTOCOL_REQ\n");
-		ApiFpMmStartProtocolReqType * r = malloc(sizeof(ApiFpMmStartProtocolReqType));
-		r->Primitive = API_FP_MM_START_PROTOCOL_REQ;
-		busmail_send((uint8_t *)r, sizeof(ApiFpMmStartProtocolReqType), PF);
-		free(r);
-		
-
-		/* Start registration */
-		printf("\nWRITE: API_FP_MM_SET_REGISTRATION_MODE_REQ\n");
-		ApiFpMmSetRegistrationModeReqType r2 = { .Primitive = API_FP_MM_SET_REGISTRATION_MODE_REQ, \
-							.RegistrationEnabled = true, .DeleteLastHandset = false};
-		busmail_send((uint8_t *)&r2, sizeof(ApiFpMmStartProtocolReqType), PF);
-
 		break;
 
 
@@ -146,11 +132,6 @@ static void application_frame(busmail_t *m) {
 		break;
 
 
-	case API_FP_MM_SET_REGISTRATION_MODE_CFM:
-		printf("API_FP_MM_SET_REGISTRATION_MODE_CFM\n");
-		/* just ack the package */
-		busmail_ack();
-		break;
 	}
 }
 
@@ -169,7 +150,7 @@ void init_nvs_state(int dect_fd) {
 	system("/usr/bin/dect-reset > /dev/null");
 
 	/* Init input buffer */
-	buf = buffer_new(500);
+	buf = buffer_new(5000);
 	
 	/* Init busmail subsystem */
 	busmail_init(dect_fd, application_frame);

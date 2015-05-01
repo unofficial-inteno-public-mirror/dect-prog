@@ -211,7 +211,7 @@ busmail_send(uint8_t * data, int size, uint8_t pf) {
 }
 
 
-static busmail_send0(uint8_t * data, int size, uint8_t pf) {
+void busmail_send0(uint8_t * data, int size, uint8_t pf) {
 
 	uint8_t tx_seq_tmp, rx_seq_tmp;
 	busmail_t * r;	
