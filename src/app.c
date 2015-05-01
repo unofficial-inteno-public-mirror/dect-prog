@@ -23,7 +23,6 @@
 #include "util.h"
 #include "app.h"
 #include "buffer.h"
-#include "packet.h"
 #include "busmail.h"
 
 

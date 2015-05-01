@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include "error.h"
-#include "packet.h"
+#include "busmail.h"
 
 
 #define BUSMAIL_PACKET_HEADER 0x10

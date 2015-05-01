@@ -21,7 +21,7 @@
 #include "util.h"
 #include "buffer.h"
 #include "preloader.h"
-#include "packet.h"
+#include "busmail.h"
 
 #include "MRtxDef.h"
 #include "MailDef.h"
@@ -30,6 +30,8 @@
 #define BUF_SIZE 5000
 #define SECTOR_ERASE_CMD 0x30
 #define CHIP_ERASE_CMD 0x10
+
+
 
 
 typedef struct __attribute__((__packed__))
