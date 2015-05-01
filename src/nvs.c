@@ -24,8 +24,6 @@
 #include "busmail.h"
 
 
-#define INBUF_SIZE 5000
-
 #define PT_CMD_SET_ID 0x001B
 #define PT_CMD_GET_ID 0x001C
 #define PT_CMD_SET_NVS 0x0100
@@ -78,17 +76,22 @@ static void rtx_eap_hw_test_cfm(busmail_t *m) {
 		printf("PT_CMD_NVS_DEFAULT\n");
 		
 		if (t->data[0] == RSS_PENDING) {
+
 			printf("nvs_default: pending\n");
+			busmail_ack();
+
 		} else if (t->data[0] == RSS_SUCCESS) {
+
 			printf("nvs_default: ok\n");
-
 			printf("Set NVS\n");
-		uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x00, 0x01, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0b, 0x02, 0x3f, 0x80, 0x00, 0xf8, 0x25, 0xc0, 0x01, 0x00, 0xf8, 0x23};
+		uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x00, 0x01, 0x10, 0x00, \
+				  0x00, 0x00, 0x00, 0x00, 0x0b, 0x02, 0x3f, 0x80, \
+				  0x00, 0xf8, 0x25, 0xc0, 0x01, 0x00, 0xf8, 0x23};
 		busmail_send0(data, sizeof(data), PF);
-
 			
 		} else {
 			printf("bogus\n");
+			busmail_ack();
 		}
 
 		break;
@@ -96,15 +99,17 @@ static void rtx_eap_hw_test_cfm(busmail_t *m) {
 	case PT_CMD_SET_NVS:
 		printf("PT_CMD_SET_NVS\n");
 		printf("Get NVS\n");
-		uint8_t data1[] = {0x66, 0xf0, 0x00, 0x00, 0x01, 0x01, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff};
+		uint8_t data1[] = {0x66, 0xf0, 0x00, 0x00, 0x01, 0x01, 0x05, 0x00, \
+				   0x00, 0x00, 0x00, 0x00, 0xff};
 		busmail_send0(data1, sizeof(data1), PF);
-
 		break;
 
 	case PT_CMD_GET_NVS:
 		printf("PT_CMD_GET_NVS\n");
+		busmail_ack();
+		
+		exit(0);
 		break;
-
 	}
 		
 }
@@ -136,7 +141,6 @@ static void application_frame(busmail_t *m) {
 	case RTX_EAP_HW_TEST_CFM:
 		printf("RTX_EAP_HW_TEST_CFM\n");
 		rtx_eap_hw_test_cfm(m);
-		busmail_ack();
 		break;
 
 	case API_FP_GET_FW_VERSION_CFM:
@@ -148,19 +152,13 @@ static void application_frame(busmail_t *m) {
 		busmail_send0(data, sizeof(data), PF);
 		break;
 
-
 	case API_SCL_STATUS_IND:
 		printf("API_SCL_STATUS_IND\n");
 		/* just ack the package */
 		busmail_ack();
 		break;
-
-
 	}
 }
-
-
-
 
 
 void init_nvs_state(int dect_fd) {
@@ -178,7 +176,6 @@ void init_nvs_state(int dect_fd) {
 	
 	/* Init busmail subsystem */
 	busmail_init(dect_fd, application_frame);
-	
 }
 
 
