@@ -26,8 +26,6 @@
 #include "busmail.h"
 
 
-#define NO_PF 0
-#define PF 1
 #define INBUF_SIZE 5000
 
 buffer_t * buf;
@@ -74,13 +72,6 @@ static void application_frame(busmail_t *m) {
 		if (reset_ind == 0) {
 			reset_ind = 1;
 
-			/* printf("\nWRITE: API_FP_GET_FW_VERSION_REQ\n"); */
-			/* ApiFpGetFwVersionReqType m1 = { .Primitive = API_FP_GET_FW_VERSION_REQ, }; */
-			/* busmail_send((uint8_t *)&m1, sizeof(ApiFpGetFwVersionReqType), PF); */
-			/* ApiProdTestReqType m1 = { .Primitive = RTX_EAP_HW_TEST_REQ, .Opcode = PT_CMD_NVS_DEFAULT, .ParameterLength = 1, .Parameters[0] = 1, }; */
-
-			
-
 			printf("\nWRITE: API_FP_GET_FW_VERSION_REQ\n");
 			ApiFpGetFwVersionReqType m1 = { .Primitive = API_FP_GET_FW_VERSION_REQ, };
 			busmail_send((uint8_t *)&m1, sizeof(ApiFpGetFwVersionReqType), PF);
@@ -88,18 +79,6 @@ static void application_frame(busmail_t *m) {
 		} else {
 			busmail_ack();
 		}
-
-
-		/* ApiFpCcFeaturesReqType * r = (ApiFpCcFeaturesReqType*) malloc(sizeof(ApiFpCcFeaturesReqType)); */
-
-		/* r->Primitive = API_FP_CC_FEATURES_REQ; */
-		/* r->ApiFpCcFeature = API_FP_CC_EXTENDED_TERMINAL_ID_SUPPORT; */
-
-		/* printf("API_FP_CC_FEATURES_REQ\n"); */
-		/* busmail_send((uint8_t *)r, sizeof(ApiFpCcFeaturesReqType)); */
-		/* free(r); */
-		
-
 
 		break;
 
@@ -148,39 +127,20 @@ static void application_frame(busmail_t *m) {
 		/* busmail_send0(data, sizeof(data), PF); */
 
 
-		/* /\* setup default *\/ */
-		/* printf("\nWRITE: API_FP_MM_EXT_HIGHER_LAYER_CAP2_REQ\n"); */
-		/* ApiFpMmExtHigherLayerCap2ReqType* m2 = (ApiFpMmExtHigherLayerCap2ReqType*) \ */
-		/* 	malloc((sizeof(ApiFpMmExtHigherLayerCap2ReqType))); */
-		/* m2->Primitive = API_FP_MM_EXT_HIGHER_LAYER_CAP2_REQ; */
-		/* m2->FpCapBit24_31 = 0x84; */
-		/* m2->FpCapBit32_39 = 0x24; /\* no_emmision == 0 *\/ */
-		/* m2->FpCapBit40_47 = 0; */
-		/* busmail_send((uint8_t *)m2, sizeof(ApiFpMmExtHigherLayerCap2ReqType), PF); */
-		/* free(m2); */
-
-
-
 		/* Start protocol */
+		printf("\nWRITE: API_FP_MM_START_PROTOCOL_REQ\n");
 		ApiFpMmStartProtocolReqType * r = malloc(sizeof(ApiFpMmStartProtocolReqType));
 		r->Primitive = API_FP_MM_START_PROTOCOL_REQ;
-
-		printf("\nWRITE: API_FP_MM_START_PROTOCOL_REQ\n");
 		busmail_send((uint8_t *)r, sizeof(ApiFpMmStartProtocolReqType), PF);
 		free(r);
 		
 
 		/* Start registration */
+		printf("\nWRITE: API_FP_MM_SET_REGISTRATION_MODE_REQ\n");
 		ApiFpMmSetRegistrationModeReqType r2 = { .Primitive = API_FP_MM_SET_REGISTRATION_MODE_REQ, \
 							.RegistrationEnabled = true, .DeleteLastHandset = false};
-
-		printf("\nWRITE: API_FP_MM_SET_REGISTRATION_MODE_REQ\n");
 		busmail_send((uint8_t *)&r2, sizeof(ApiFpMmStartProtocolReqType), PF);
 
-
-		/* /\* just ack the package *\/ */
-		/* busmail_ack(); */
-		
 		break;
 
 
@@ -188,32 +148,14 @@ static void application_frame(busmail_t *m) {
 		printf("API_SCL_STATUS_IND\n");
 		/* just ack the package */
 		busmail_ack();
-
 		break;
-
-
-	case API_FP_CC_FEATURES_CFM:
-		printf("API_FP_CC_FEATURES_CFM\n");
-
-
-		/* Start protocol */
-		ApiFpMmStartProtocolReqType * r1 = malloc(sizeof(ApiFpMmStartProtocolReqType));
-		r1->Primitive = API_FP_MM_START_PROTOCOL_REQ;
-
-		printf("API_FP_MM_START_PROTOCOL_REQ\n");
-		busmail_send((uint8_t *)r1, sizeof(ApiFpMmStartProtocolReqType), NO_PF);
-		free(r1);
-
-
 
 
 	case API_FP_MM_SET_REGISTRATION_MODE_CFM:
 		printf("API_FP_MM_SET_REGISTRATION_MODE_CFM\n");
 		/* just ack the package */
 		busmail_ack();
-
 		break;
-
 	}
 }
 
@@ -255,12 +197,8 @@ void handle_app_package(event_t *e) {
 		printf("buffer full\n");
 	}
 	
-	//buffer_dump(buf);
-	
 	/* Process whole packets in buffer */
-
 	while(packet_get(p, buf) == 0) {
-		//packet_dump(p);
 		packet_dispatch(p);
 	}
 }

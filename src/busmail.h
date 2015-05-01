@@ -5,6 +5,9 @@
 #include "buffer.h"
 
 #define PACKET_SIZE 500
+#define NO_PF 0
+#define PF 1
+
 
 typedef struct {
 	int fd;
