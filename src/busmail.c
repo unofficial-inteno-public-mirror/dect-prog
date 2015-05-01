@@ -328,7 +328,7 @@ static void information_frame(packet_t *p) {
 
 
 
-int packet_get(packet_t *p, buffer_t *b) {
+int busmail_get(packet_t *p, buffer_t *b) {
 	
 	int i, start, stop, size;
 	uint8_t crc = 0, crc_calc = 0;
@@ -397,7 +397,7 @@ void packet_dump(packet_t *p) {
 }
 
 
-void packet_dispatch(packet_t *p) {
+void busmail_dispatch(packet_t *p) {
 
 	busmail_t * m = (busmail_t *) &p->data[0];
 	

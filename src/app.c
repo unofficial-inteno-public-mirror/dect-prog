@@ -198,8 +198,8 @@ void handle_app_package(event_t *e) {
 	}
 	
 	/* Process whole packets in buffer */
-	while(packet_get(p, buf) == 0) {
-		packet_dispatch(p);
+	while(busmail_get(p, buf) == 0) {
+		busmail_dispatch(p);
 	}
 }
 

@@ -1,5 +1,5 @@
-#ifndef PACKET_H
-#define PACKET_H
+#ifndef BUSMAIL_H
+#define BUSMAIL_H
 
 #include <stdint.h>
 #include "buffer.h"
@@ -27,8 +27,8 @@ typedef struct __attribute__((__packed__))
 
 
 
-int packet_get(packet_t *p, buffer_t *b);
+int busmail_get(packet_t *p, buffer_t *b);
 void packet_dump(packet_t *p);
-void packet_dispatch(packet_t *p);
+void busmail_dispatch(packet_t *p);
 
-#endif /* PACKET_H */
+#endif /* BUSMAIL_H */
