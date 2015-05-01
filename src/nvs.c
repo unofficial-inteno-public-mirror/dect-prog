@@ -26,9 +26,23 @@
 
 #define INBUF_SIZE 5000
 
+#define PT_CMD_SET_ID 0x001B
+#define PT_CMD_GET_ID 0x001C
+#define PT_CMD_SET_NVS 0x0100
+#define PT_CMD_GET_NVS 0x0101
+#define PT_CMD_NVS_DEFAULT 0x0102
+
+
 buffer_t * buf;
 static int reset_ind = 0;
 
+
+typedef struct __attribute__((__packed__))
+{
+	uint16_t TestPrimitive;
+	uint16_t size;
+	uint8_t data[0];
+} rtx_eap_hw_test_cfm_t;
 
 static void fw_version_cfm(busmail_t *m) {
 
@@ -52,6 +66,31 @@ static void fw_version_cfm(busmail_t *m) {
 
 }
 
+
+static void rtx_eap_hw_test_cfm(busmail_t *m) {
+	
+	printf("barf\n");
+	rtx_eap_hw_test_cfm_t * t = (rtx_eap_hw_test_cfm_t *) m->mail_data;
+	
+	
+	switch (t->TestPrimitive) {
+
+	case PT_CMD_NVS_DEFAULT:
+		printf("PT_CMD_NVS_DEFAULT\n");
+		
+		if (t->data[0] == RSS_PENDING) {
+			printf("nvs_default: pending\n");
+		} else if (t->data[0] == RSS_SUCCESS) {
+			printf("nvs_default: ok\n");
+			
+		} else {
+			printf("bogus\n");
+		}
+
+		break;
+	}
+		
+}
 
 
 static void application_frame(busmail_t *m) {
@@ -79,6 +118,7 @@ static void application_frame(busmail_t *m) {
 
 	case RTX_EAP_HW_TEST_CFM:
 		printf("RTX_EAP_HW_TEST_CFM\n");
+		rtx_eap_hw_test_cfm(m);
 		busmail_ack();
 		break;
 
@@ -115,12 +155,6 @@ static void application_frame(busmail_t *m) {
 		/* uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x00, 0x01, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0b, 0x02, 0x3f, 0x80, 0x00, 0xf8, 0x25, 0xc0, 0x01, 0x00, 0xf8, 0x23}; */
 		/* busmail_send0(data, sizeof(data), PF); */
 
-
-
-		/* #define PT_CMD_GET_BAND_GAP 0x0300 */
-		/* printf("\nWRITE: GetBandGap\n"); */
-		/* uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x00, 0x30, 0x00, 0x00 }; */
-		/* busmail_send0(data, sizeof(data), PF); */
 
 		break;
 
