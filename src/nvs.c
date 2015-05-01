@@ -69,7 +69,6 @@ static void fw_version_cfm(busmail_t *m) {
 
 static void rtx_eap_hw_test_cfm(busmail_t *m) {
 	
-	printf("barf\n");
 	rtx_eap_hw_test_cfm_t * t = (rtx_eap_hw_test_cfm_t *) m->mail_data;
 	
 	
@@ -82,12 +81,30 @@ static void rtx_eap_hw_test_cfm(busmail_t *m) {
 			printf("nvs_default: pending\n");
 		} else if (t->data[0] == RSS_SUCCESS) {
 			printf("nvs_default: ok\n");
+
+			printf("Set NVS\n");
+		uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x00, 0x01, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0b, 0x02, 0x3f, 0x80, 0x00, 0xf8, 0x25, 0xc0, 0x01, 0x00, 0xf8, 0x23};
+		busmail_send0(data, sizeof(data), PF);
+
 			
 		} else {
 			printf("bogus\n");
 		}
 
 		break;
+
+	case PT_CMD_SET_NVS:
+		printf("PT_CMD_SET_NVS\n");
+		printf("Get NVS\n");
+		uint8_t data1[] = {0x66, 0xf0, 0x00, 0x00, 0x01, 0x01, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff};
+		busmail_send0(data1, sizeof(data1), PF);
+
+		break;
+
+	case PT_CMD_GET_NVS:
+		printf("PT_CMD_GET_NVS\n");
+		break;
+
 	}
 		
 }
@@ -126,36 +143,9 @@ static void application_frame(busmail_t *m) {
 		printf("API_FP_GET_FW_VERSION_CFM\n");
 		fw_version_cfm(m);
 
-
-		/* printf("Get NVS\n"); */
-		/* uint8_t data1[] = {0x66, 0xf0, 0x00, 0x00, 0x01, 0x01, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff}; */
-		/* busmail_send0(data1, sizeof(data1), PF); */
-
-
 		printf("\nWRITE: NvsDefault\n");
 		uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x02, 0x01, 0x01, 0x00, 0x01};
 		busmail_send0(data, sizeof(data), PF);
-
-
-		/* printf("\nWRITE: GetId\n"); */
-		/* uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x1c, 0x00, 0x00, 0x00}; */
-		/* busmail_send0(data, sizeof(data), PF); */
-
-		//	       #define PT_CMD_SET_ID 0x001B
-		/* printf("\nWRITE: SetId\n"); */
-		/* uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x1b, 0x00, 0x05, 0x00, 0x02, 0x3f, 0x80, 0x00, 0xf8}; */
-		/* busmail_send0(data, sizeof(data), PF); */
-		
-		/* printf("Get NVS\n"); */
-		/* uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x01, 0x01, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff}; */
-		/* busmail_send0(data, sizeof(data), PF); */
-
-		/* #define PT_CMD_SET_NVS 0x0100 */
-		/* printf("Set NVS\n"); */
-		/* uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x00, 0x01, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0b, 0x02, 0x3f, 0x80, 0x00, 0xf8, 0x25, 0xc0, 0x01, 0x00, 0xf8, 0x23}; */
-		/* busmail_send0(data, sizeof(data), PF); */
-
-
 		break;
 
 
