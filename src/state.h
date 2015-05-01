@@ -6,6 +6,7 @@ enum states {
 	PRELOADER_STATE,
 	FLASHLOADER_STATE,
 	APP_STATE,
+	NVS_STATE,
 };
 
 

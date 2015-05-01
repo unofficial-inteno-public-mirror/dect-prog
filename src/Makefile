@@ -9,7 +9,7 @@ INCLUDE_PATHS += -I$(STAGING_DIR)/usr/include/natalie-dect/ \
 
 
 
-dect-prog: boot.o tty.o error.o main.o state.o util.o preloader.o flashloader.o Crc.o app.o buffer.o busmail.o
+dect-prog: boot.o tty.o error.o main.o state.o util.o preloader.o flashloader.o Crc.o app.o buffer.o busmail.o nvs.o
 	$(GCC) $(INCLUDE_PATHS) -o $@ $^
 
 

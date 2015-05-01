@@ -19,9 +19,7 @@
 #include "tty.h"
 #include "error.h"
 #include "state.h"
-#include "boot.h"
 #include "util.h"
-#include "app.h"
 #include "buffer.h"
 #include "busmail.h"
 
@@ -30,7 +28,6 @@
 
 buffer_t * buf;
 static int reset_ind = 0;
-
 
 
 static void fw_version_cfm(busmail_t *m) {
@@ -57,8 +54,6 @@ static void fw_version_cfm(busmail_t *m) {
 
 
 
-
-
 static void application_frame(busmail_t *m) {
 	
 	int i;
@@ -66,7 +61,7 @@ static void application_frame(busmail_t *m) {
 	switch (m->mail_header) {
 		
 	case API_FP_RESET_IND:
-		printf("API_FP_RESET_IND\n");
+		printf("API_FP_RESET_IND NVS\n");
 		
 
 		if (reset_ind == 0) {
@@ -163,9 +158,9 @@ static void application_frame(busmail_t *m) {
 
 
 
-void init_app_state(int dect_fd) {
+void init_nvs_state(int dect_fd) {
 	
-	printf("APP_STATE\n");
+	printf("NVS_STATE\n");
 
 	tty_set_raw(dect_fd);
 	tty_set_baud(dect_fd, B115200);
@@ -182,7 +177,7 @@ void init_app_state(int dect_fd) {
 }
 
 
-void handle_app_package(event_t *e) {
+void handle_nvs_package(event_t *e) {
 
 	uint8_t header;
 	packet_t packet;
@@ -207,10 +202,10 @@ void handle_app_package(event_t *e) {
 
 
 
-struct state_handler app_handler = {
-	.state = APP_STATE,
-	.init_state = init_app_state,
-	.event_handler = handle_app_package,
+struct state_handler nvs_handler = {
+	.state = NVS_STATE,
+	.init_state = init_nvs_state,
+	.event_handler = handle_nvs_package,
 };
 
-struct state_handler * app_state = &app_handler;
+struct state_handler * nvs_state = &nvs_handler;

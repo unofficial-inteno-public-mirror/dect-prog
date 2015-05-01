@@ -13,6 +13,7 @@
 #include "state.h"
 #include "util.h"
 #include "app.h"
+#include "nvs.h"
 
 
 
@@ -69,9 +70,15 @@ int main(int argc, char * argv[]) {
 		state_add_handler(boot_state, dect_fd);
 		state_transition(BOOT_STATE);
 
+	} else if (config->mode == NVS_MODE) {
+
+		/* Firmware written, setup NVS */
+		state_add_handler(nvs_state, dect_fd);
+		state_transition(NVS_STATE);
+
 	} else if (config->mode == APP_MODE) {
 
-		/* Firmware written, init firmware */
+		/* Radio on, start regmode */
 		state_add_handler(app_state, dect_fd);
 		state_transition(APP_STATE);
 

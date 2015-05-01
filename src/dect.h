@@ -34,6 +34,7 @@ typedef struct dect_state {
 enum {
 	PROG_MODE,
 	APP_MODE,
+	NVS_MODE,
 };
 
 

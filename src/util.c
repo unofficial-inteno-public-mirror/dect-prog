@@ -33,7 +33,7 @@ int check_args(int argc, char * argv[], config_t * c) {
 
 	/* Check arguments */
 	if (argc < 2) {
-		err_exit("Usage: %s <prog | app>", argv[0]);
+		err_exit("Usage: %s <prog | nvs | app>", argv[0]);
 	}
 
 
@@ -43,6 +43,9 @@ int check_args(int argc, char * argv[], config_t * c) {
 		return 0;
 	} else if (strcmp("app", argv[1]) == 0) {
 		c->mode = APP_MODE;
+		return 0;
+	} else if (strcmp("nvs", argv[1]) == 0) {
+		c->mode = NVS_MODE;
 		return 0;
 	} else {
 		return -1;
