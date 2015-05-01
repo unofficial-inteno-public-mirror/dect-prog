@@ -62,7 +62,7 @@ static void fw_version_cfm(busmail_t *m) {
 
 
 
-void application_frame(busmail_t *m) {
+static void application_frame(busmail_t *m) {
 	
 	int i;
 
@@ -236,7 +236,7 @@ void init_app_state(int dect_fd) {
 	buf = buffer_new(500);
 	
 	/* Init busmail subsystem */
-	busmail_init(dect_fd);
+	busmail_init(dect_fd, application_frame);
 	
 }
 

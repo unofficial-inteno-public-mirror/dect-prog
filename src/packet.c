@@ -5,7 +5,7 @@
 
 #include "error.h"
 #include "packet.h"
-#include "app.h"
+
 
 #define BUSMAIL_PACKET_HEADER 0x10
 #define BUSMAIL_HEADER_SIZE 3
@@ -46,7 +46,7 @@
 uint8_t tx_seq_l, rx_seq_l, tx_seq_r, rx_seq_r;
 
 int busmail_fd;
-
+void (*application_frame) (busmail_t *);
 
 
 static uint8_t * make_tx_packet(uint8_t * tx, void * packet, int data_size) {
@@ -440,8 +440,9 @@ void packet_dispatch(packet_t *p) {
 
 }
 
-int busmail_init(int fd) {
+int busmail_init(int fd, void (*app_handler)(busmail_t *)) {
 
 	printf("busmail_init\n");
 	busmail_fd = fd;
+	application_frame = app_handler;
 }
