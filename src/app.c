@@ -195,6 +195,9 @@ void handle_app_package(event_t *e) {
 	/* Add input to buffer */
 	if (buffer_write(buf, e->in, e->incount) == 0) {
 		printf("buffer full\n");
+
+		/* Note: Fix circular buffer */
+		exit(-1);
 	}
 	
 	/* Process whole packets in buffer */
