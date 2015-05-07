@@ -56,9 +56,6 @@ static void fw_version_cfm(busmail_t *m) {
 }
 
 
-
-
-
 static void application_frame(busmail_t *m) {
 	
 	int i;
@@ -96,44 +93,12 @@ static void application_frame(busmail_t *m) {
 		printf("API_FP_GET_FW_VERSION_CFM\n");
 		fw_version_cfm(m);
 
-		/* printf("\nWRITE: NvsDefault\n"); */
-		/* uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x02, 0x01, 0x01, 0x00, 0x01}; */
-		/* busmail_send0(data, sizeof(data), PF); */
-
-
-		/* printf("\nWRITE: GetId\n"); */
-		/* uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x1c, 0x00, 0x00, 0x00}; */
-		/* busmail_send0(data, sizeof(data), PF); */
-
-		//	       #define PT_CMD_SET_ID 0x001B
-		/* printf("\nWRITE: SetId\n"); */
-		/* uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x1b, 0x00, 0x05, 0x00, 0x02, 0x3f, 0x80, 0x00, 0xf8}; */
-		/* busmail_send0(data, sizeof(data), PF); */
-		
-		/* printf("Get NVS\n"); */
-		/* uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x01, 0x01, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff}; */
-		/* busmail_send0(data, sizeof(data), PF); */
-
-		/* #define PT_CMD_SET_NVS 0x0100 */
-		/* printf("Set NVS\n"); */
-		/* uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x00, 0x01, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0b, 0x02, 0x3f, 0x80, 0x00, 0xf8, 0x25, 0xc0, 0x01, 0x00, 0xf8, 0x23}; */
-		/* busmail_send0(data, sizeof(data), PF); */
-
-
-
-		/* #define PT_CMD_GET_BAND_GAP 0x0300 */
-		/* printf("\nWRITE: GetBandGap\n"); */
-		/* uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x00, 0x30, 0x00, 0x00 }; */
-		/* busmail_send0(data, sizeof(data), PF); */
-
-
 		/* Start protocol */
 		printf("\nWRITE: API_FP_MM_START_PROTOCOL_REQ\n");
 		ApiFpMmStartProtocolReqType * r = malloc(sizeof(ApiFpMmStartProtocolReqType));
 		r->Primitive = API_FP_MM_START_PROTOCOL_REQ;
 		busmail_send((uint8_t *)r, sizeof(ApiFpMmStartProtocolReqType), PF);
 		free(r);
-		
 
 		/* Start registration */
 		printf("\nWRITE: API_FP_MM_SET_REGISTRATION_MODE_REQ\n");
