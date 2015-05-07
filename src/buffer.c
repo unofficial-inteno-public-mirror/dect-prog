@@ -35,65 +35,145 @@ buffer_t * buffer_new(int size) {
 }
 
 
-int buffer_write(buffer_t * self, uint8_t *input, int count) {
-
-
-	if ( self->state == NORMAL_STATE) {
-		/* Normal state */
-
-		/* Don't write beyond buffer boundary */
-		if ( self->data_end + count > self->buf_end ) {
-			count = self->buf_end - self->data_end;
-		}
-
-		memcpy(self->data_end, input, count);
-		self->data_end += count;
-		self->count += count;
-	} else {
-		/* Wrapped state */
-
-		/* Don't write beyond start of data */
-		if ( self->data_end + count > self->data_start ) {
-			count = self->data_start - self->data_end;
-		}
-		
-		memcpy(self->data_end, input, count);
-		self->data_end += count;
-		self->count += count;
-	}
+static int write_normal(buffer_t * self, uint8_t *input, int count) {
 	
+	/* Don't write beyond buffer boundary */
+	if ( self->data_end + count > self->buf_end ) {
+		count = self->buf_end - self->data_end;
+	}
+
+	memcpy(self->data_end, input, count);
+	self->data_end += count;
+	self->count += count;
+
 	return count;
 }
 
 
-int buffer_read(buffer_t * self, uint8_t *buf, int count) {
+static int write_wrapped(buffer_t * self, uint8_t *input, int count) {
 
-	if ( self->state == NORMAL_STATE ) {
-		/* Normal state */
-
-		/* Don't read beyond end of data */
-		if ( count > self->count) {
-			count = self->count;
-		}
-
-		memcpy(buf, self->data_start, count);
-		self->data_start += count;
-		self->count -= count;
-
-	} else {
-		/* Wrapped state */
-
-		/* Don't read beyond end of buffer */
-		if ( self->data_start + count > self->buf_end ) {
-			count = self->buf_end - self->data_start;
-		}
+	/* Don't write beyond start of data */
+	if ( self->data_end + count > self->data_start ) {
+		count = self->data_start - self->data_end;
+	}
 		
-		memcpy(buf, self->data_start, count);
-		self->data_start += count;
-		self->count -= count;
-	} 
+	memcpy(self->data_end, input, count);
+	self->data_end += count;
+	self->count += count;
 
 	return count;
+}
+
+
+static int read_normal(buffer_t * self, uint8_t *buf, int count) {
+	printf("read_normal: %d\n", count);
+	/* Don't read beyond end of data */
+	if ( count > self->count) {
+		count = self->count;
+	}
+
+	memcpy(buf, self->data_start, count);
+	self->data_start += count;
+	self->count -= count;
+	
+	printf("rn self->count: %d\n", self->count);
+		
+	return count;
+}
+
+static int read_wrapped(buffer_t * self, uint8_t *buf, int count) {
+	
+	printf("read_wrapped: %d\n", count);
+	/* Don't read beyond end of buffer */
+	if ( self->data_start + count > self->buf_end ) {
+		count = self->buf_end - self->data_start;
+	}
+		
+	memcpy(buf, self->data_start, count);
+	self->data_start += count;
+	self->count -= count;
+
+	printf("rw self->count: %d\n", self->count);
+
+	return count;
+}
+
+
+int buffer_write(buffer_t * self, uint8_t *input, int count) {
+	
+	int written;
+	
+	if (self->count == self->buf_size) {
+		return 0;
+	}
+
+	if ( self->state == NORMAL_STATE) {
+
+		written = write_normal(self, input, count);
+
+		if ( written < count && self->count < self->buf_size ) {
+
+			/* Wrap the buffer */
+			self->state = WRAPPED_STATE;
+			self->data_end = self->buf_start;
+
+			written += write_wrapped(self, input + written, count - written);
+		}
+	
+	} else if (self->state == WRAPPED_STATE )  {
+
+		written = write_wrapped(self, input, count);
+
+		if ( written < count && self->count < self->buf_size ) {
+
+			/* Wrap the buffer */
+			self->state = NORMAL_STATE;
+			self->data_end = self->buf_start;
+			
+			written += write_normal(self, input + written, count - written);
+		}
+	}
+
+	printf("bw: self->count %d\n", self->count);
+	return written;
+}
+
+
+int buffer_read(buffer_t * self, uint8_t *buf, int count) {
+	
+	int read;
+
+	if ( self->state == NORMAL_STATE ) {
+
+		read = read_normal(self, buf, count);
+		
+		if ( read < count && self->count > 0) {
+
+			/* Wrap the buffer */
+			self->state = WRAPPED_STATE;
+			self->data_start = self->buf_start;
+			
+			read += read_wrapped(self, buf + read, count - read);
+		}
+
+
+
+	} else if (self->state == WRAPPED_STATE )  {
+
+		read = read_wrapped(self, buf, count);
+		
+		if ( read < count && self->count > 0) {
+
+			/* Wrap the buffer */
+			self->state = NORMAL_STATE;
+			self->data_start = self->buf_start;
+
+			read += read_normal(self, buf + read, count - read);
+		}
+
+	} 
+
+	return read;
 }
 
 
