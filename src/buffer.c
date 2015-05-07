@@ -6,6 +6,11 @@
 #include "error.h"
 
 
+enum {
+	NORMAL_STATE,
+	WRAPPED_STATE,
+};
+
 buffer_t * buffer_new(int size) {
 
 	buffer_t *b = (buffer_t *) calloc(sizeof(buffer_t), 1);
@@ -24,6 +29,7 @@ buffer_t * buffer_new(int size) {
 	b->buf_size = size;
 	b->data_start = b->buf_start;
 	b->data_end = b->buf_start;
+	b->state = NORMAL_STATE;
 	
 	return b;
 }
@@ -31,29 +37,61 @@ buffer_t * buffer_new(int size) {
 
 int buffer_write(buffer_t * self, uint8_t *input, int count) {
 
-	/* Don't write beyond buffer boundary */
-	if ( self->data_end + count > self->buf_end) {
-		count = self->buf_end - self->data_end;
+
+	if ( self->state == NORMAL_STATE) {
+		/* Normal state */
+
+		/* Don't write beyond buffer boundary */
+		if ( self->data_end + count > self->buf_end ) {
+			count = self->buf_end - self->data_end;
+		}
+
+		memcpy(self->data_end, input, count);
+		self->data_end += count;
+		self->count += count;
+	} else {
+		/* Wrapped state */
+
+		/* Don't write beyond start of data */
+		if ( self->data_end + count > self->data_start ) {
+			count = self->data_start - self->data_end;
+		}
+		
+		memcpy(self->data_end, input, count);
+		self->data_end += count;
+		self->count += count;
 	}
-
-	memcpy(self->data_end, input, count);
-	self->data_end += count;
-	self->count += count;
-
+	
 	return count;
 }
 
 
 int buffer_read(buffer_t * self, uint8_t *buf, int count) {
 
-	/* Don't read beyond data boundary */
-	if ( count > self->count) {
-		count = self->count;
-	}
+	if ( self->state == NORMAL_STATE ) {
+		/* Normal state */
 
-	memcpy(buf, self->data_start, count);
-	self->data_start += count;
-	self->count -= count;
+		/* Don't read beyond end of data */
+		if ( count > self->count) {
+			count = self->count;
+		}
+
+		memcpy(buf, self->data_start, count);
+		self->data_start += count;
+		self->count -= count;
+
+	} else {
+		/* Wrapped state */
+
+		/* Don't read beyond end of buffer */
+		if ( self->data_start + count > self->buf_end ) {
+			count = self->buf_end - self->data_start;
+		}
+		
+		memcpy(buf, self->data_start, count);
+		self->data_start += count;
+		self->count -= count;
+	} 
 
 	return count;
 }
@@ -61,13 +99,33 @@ int buffer_read(buffer_t * self, uint8_t *buf, int count) {
 
 int buffer_rewind(buffer_t * self, int count) {
 	
-	/* Don't rewind beyond start of buffer */
-	if ( self->data_start - count < self->buf_start ) {
-		count = self->data_start - self->buf_start;
-	} 
+	if ( self->state == NORMAL_STATE ) {
+		
+		/* Normal state */
+
+		/* Don't rewind beyond start of buffer */
+		if ( self->data_start - count < self->buf_start ) {
+			count = self->data_start - self->buf_start;
+		} 
 	
-	self->data_start -= count;
-	self->count += count;
+		self->data_start -= count;
+		self->count += count;
+
+	} else {
+		
+		/* Wrapped state */
+		
+		/* Don't rewind beyond end of data */
+		if ( self->data_start - count < self->data_end ) {
+			count = self->data_start - self->data_end;
+		}
+	
+		self->data_start -= count;
+		self->count += count;
+		
+	}
+
+	return count;
 }
 
 

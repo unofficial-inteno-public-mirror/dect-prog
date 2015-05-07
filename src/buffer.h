@@ -11,6 +11,7 @@ typedef struct {
 	uint8_t * data_end;
 	uint32_t count;
 	uint32_t buf_size;
+	uint8_t state;
 } buffer_t;
 
 buffer_t * buffer_new(int size);
