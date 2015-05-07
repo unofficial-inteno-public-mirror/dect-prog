@@ -14,15 +14,17 @@ buffer_t * buffer_new(int size) {
 		exit_failure("malloc\n");
 	}
 	
-	b->in = calloc(size, 1);
-	if (!b->in) {
+	b->buf_start = calloc(size, 1);
+	if (!b->buf_start) {
 		exit_failure("malloc\n");
 	}
 	
 	b->count = 0;
-	b->cursor = 0;
-	b->max = size;
-
+	b->buf_end = b->buf_start + size;
+	b->buf_size = size;
+	b->data_start = b->buf_start;
+	b->data_end = b->buf_start;
+	
 	return b;
 }
 
@@ -30,13 +32,14 @@ buffer_t * buffer_new(int size) {
 int buffer_write(buffer_t * self, uint8_t *input, int count) {
 
 	/* Don't write beyond buffer boundary */
-	if ( self->count + count > self->max) {
-		count = self->max - self->count;
+	if ( self->data_end + count > self->buf_end) {
+		count = self->buf_end - self->data_end;
 	}
 
-	memcpy(self->in + self->count, input, count);
+	memcpy(self->data_end, input, count);
+	self->data_end += count;
 	self->count += count;
-	
+
 	return count;
 }
 
@@ -44,13 +47,14 @@ int buffer_write(buffer_t * self, uint8_t *input, int count) {
 int buffer_read(buffer_t * self, uint8_t *buf, int count) {
 
 	/* Don't read beyond data boundary */
-	if ( self->cursor + count > self->count) {
-		count = self->count - self->cursor;
+	if ( count > self->count) {
+		count = self->count;
 	}
 
-	memcpy(buf, self->in + self->cursor, count);
-	self->cursor += count;
-	
+	memcpy(buf, self->data_start, count);
+	self->data_start += count;
+	self->count -= count;
+
 	return count;
 }
 
@@ -58,25 +62,26 @@ int buffer_read(buffer_t * self, uint8_t *buf, int count) {
 int buffer_rewind(buffer_t * self, int count) {
 	
 	/* Don't rewind beyond start of buffer */
-	if ( self->cursor - count < 0 ) {
-		self->cursor = 0;
-	} else {
-		self->cursor -= count;
-	}
+	if ( self->data_start - count < self->buf_start ) {
+		count = self->data_start - self->buf_start;
+	} 
+	
+	self->data_start -= count;
+	self->count += count;
 }
 
 
 int buffer_find(buffer_t * self, uint8_t c) {
 	
-	int i;
+	/* int i; */
 
-	/* Do we have byte c in buffer? */
-        for (i = 0; i < self->count - self->cursor; i++) {
-                if (self->in[i + self->cursor] == c) {
-                        return i;
-                }
-                return -1;
-        }
+	/* /\* Do we have byte c in buffer? *\/ */
+        /* for (i = 0; i < self->count - self->cursor; i++) { */
+        /*         if (self->in[i + self->cursor] == c) { */
+        /*                 return i; */
+        /*         } */
+        /*         return -1; */
+        /* } */
 
 }
 
@@ -85,23 +90,23 @@ int buffer_dump(buffer_t * self) {
 	
 	int i;
 
-	printf("[BUFFER: count %d\t cursor %d] \n", self->count, self->cursor);
-	printf("[RAW] %d:", self->count);
-	for (i = 0; i < self->count; i++) {
-		printf("%02x ", self->in[i]);
-	}
-	printf("\n");
+	/* printf("[BUFFER: count %d\t cursor %d] \n", self->count, self->cursor); */
+	/* printf("[RAW] %d:", self->count); */
+	/* for (i = 0; i < self->count; i++) { */
+	/* 	printf("%02x ", self->in[i]); */
+	/* } */
+	/* printf("\n"); */
 
-	printf("[LOGIC] %d:\n", self->count - self->cursor);
-	for (i = 0; i < self->count - self->cursor; i++) {
-		printf("%02x ", self->in[i + self->cursor]);
-	}
-	printf("\n");
+	/* printf("[LOGIC] %d:\n", self->count - self->cursor); */
+	/* for (i = 0; i < self->count - self->cursor; i++) { */
+	/* 	printf("%02x ", self->in[i + self->cursor]); */
+	/* } */
+	/* printf("\n"); */
 
 }
 
 
 int buffer_size(buffer_t * self) {
 
-	return self->count - self->cursor;
+	return self->count;
 }
