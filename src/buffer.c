@@ -36,7 +36,7 @@ buffer_t * buffer_new(int size) {
 
 
 static int write_normal(buffer_t * self, uint8_t *input, int count) {
-	
+	printf("write_normal: %d\n", count);
 	/* Don't write beyond buffer boundary */
 	if ( self->data_end + count > self->buf_end ) {
 		count = self->buf_end - self->data_end;
@@ -45,13 +45,13 @@ static int write_normal(buffer_t * self, uint8_t *input, int count) {
 	memcpy(self->data_end, input, count);
 	self->data_end += count;
 	self->count += count;
-
+	printf("wn self->count: %d\n", self->count);
 	return count;
 }
 
 
 static int write_wrapped(buffer_t * self, uint8_t *input, int count) {
-
+	printf("write_wrapped: %d\n", count);
 	/* Don't write beyond start of data */
 	if ( self->data_end + count > self->data_start ) {
 		count = self->data_start - self->data_end;
@@ -60,7 +60,7 @@ static int write_wrapped(buffer_t * self, uint8_t *input, int count) {
 	memcpy(self->data_end, input, count);
 	self->data_end += count;
 	self->count += count;
-
+	printf("ww self->count: %d\n", self->count);
 	return count;
 }
 
@@ -99,10 +99,39 @@ static int read_wrapped(buffer_t * self, uint8_t *buf, int count) {
 }
 
 
+static int rewind_normal(buffer_t * self, int count) {
+
+	/* Don't rewind beyond start of buffer */
+	if ( self->data_start - count < self->buf_start ) {
+		count = self->data_start - self->buf_start;
+	} 
+	
+	self->data_start -= count;
+	self->count += count;
+
+	return count;
+}
+
+
+static int rewind_wrapped(buffer_t * self, int count) {
+
+	/* Don't rewind beyond end of data */
+	if ( self->data_start - count < self->data_end ) {
+		count = self->data_start - self->data_end;
+	}
+	
+	self->data_start -= count;
+	self->count += count;
+
+	return count;
+}
+
+
 int buffer_write(buffer_t * self, uint8_t *input, int count) {
 	
 	int written;
-	
+	printf("buffer_write: %d\n", count);
+
 	if (self->count == self->buf_size) {
 		return 0;
 	}
@@ -134,7 +163,8 @@ int buffer_write(buffer_t * self, uint8_t *input, int count) {
 		}
 	}
 
-	printf("bw: self->count %d\n", self->count);
+	printf("buffer_write: self->count %d\n", self->count);
+	buffer_dump(self);
 	return written;
 }
 
@@ -142,7 +172,7 @@ int buffer_write(buffer_t * self, uint8_t *input, int count) {
 int buffer_read(buffer_t * self, uint8_t *buf, int count) {
 	
 	int read;
-
+	printf("buffer_read: %d\n", count);
 	if ( self->state == NORMAL_STATE ) {
 
 		read = read_normal(self, buf, count);
@@ -167,45 +197,51 @@ int buffer_read(buffer_t * self, uint8_t *buf, int count) {
 			/* Wrap the buffer */
 			self->state = NORMAL_STATE;
 			self->data_start = self->buf_start;
-
+			
 			read += read_normal(self, buf + read, count - read);
 		}
 
 	} 
-
+	printf("buffer_read: self->count %d\n", self->count);
+	buffer_dump(self);
 	return read;
 }
 
 
 int buffer_rewind(buffer_t * self, int count) {
-	
+
+	int rewinded;
+
+	printf("buffer_rewind: %d\n", count);
 	if ( self->state == NORMAL_STATE ) {
 		
-		/* Normal state */
+		rewinded = rewind_normal(self, count);
 
-		/* Don't rewind beyond start of buffer */
-		if ( self->data_start - count < self->buf_start ) {
-			count = self->data_start - self->buf_start;
-		} 
-	
-		self->data_start -= count;
-		self->count += count;
+		if ( rewinded < count ) {
 
-	} else {
-		
-		/* Wrapped state */
-		
-		/* Don't rewind beyond end of data */
-		if ( self->data_start - count < self->data_end ) {
-			count = self->data_start - self->data_end;
+			/* Wrap the buffer */
+			self->state = WRAPPED_STATE;
+			self->data_start = self->buf_end;
+
+			rewinded += rewind_wrapped(self, count - rewinded);
 		}
-	
-		self->data_start -= count;
-		self->count += count;
-		
-	}
 
-	return count;
+	} else if (self->state == WRAPPED_STATE )  {		
+
+		rewinded = rewind_wrapped(self, count);
+		
+		if ( rewinded < count ) {
+
+			/* Wrap the buffer */
+			self->state = NORMAL_STATE;
+			self->data_start = self->buf_end;
+
+			rewinded += rewind_normal(self, count - rewinded);
+		}
+	}
+	printf("buffer_rewind: self->count %d\n", self->count);
+	buffer_dump(self);
+	return rewinded;
 }
 
 
@@ -226,20 +262,33 @@ int buffer_find(buffer_t * self, uint8_t c) {
 
 int buffer_dump(buffer_t * self) {
 	
-	int i;
+	int i, j, data_start, data_end;
+	
+	data_start = self->data_start - self->buf_start;
+	data_end = self->data_end - self->buf_start;
 
-	/* printf("[BUFFER: count %d\t cursor %d] \n", self->count, self->cursor); */
-	/* printf("[RAW] %d:", self->count); */
-	/* for (i = 0; i < self->count; i++) { */
-	/* 	printf("%02x ", self->in[i]); */
-	/* } */
-	/* printf("\n"); */
+	printf("[BUFFER: count %d\t size %d] \n", self->count, self->buf_size);
+	printf("[data_start %d\t data_end %d] \n", data_start, data_end);
 
-	/* printf("[LOGIC] %d:\n", self->count - self->cursor); */
-	/* for (i = 0; i < self->count - self->cursor; i++) { */
-	/* 	printf("%02x ", self->in[i + self->cursor]); */
-	/* } */
-	/* printf("\n"); */
+	for (i = 0; i < self->buf_size; i++) {
+
+		if ( i % 25 == 0 ) {
+			printf("\n");
+		}
+
+		if ( i == data_start ) {
+			printf("[");
+		}
+
+		if ( i == data_end ) {
+			printf("]");
+		}
+		
+
+		printf("%02x ", self->buf_start[i]);
+	}
+	printf("\n\n");
+
 
 }
 
