@@ -36,7 +36,7 @@ buffer_t * buffer_new(int size) {
 
 
 static int write_normal(buffer_t * self, uint8_t *input, int count) {
-	printf("write_normal: %d\n", count);
+
 	/* Don't write beyond buffer boundary */
 	if ( self->data_end + count > self->buf_end ) {
 		count = self->buf_end - self->data_end;
@@ -51,7 +51,7 @@ static int write_normal(buffer_t * self, uint8_t *input, int count) {
 
 
 static int write_wrapped(buffer_t * self, uint8_t *input, int count) {
-	printf("write_wrapped: %d\n", count);
+
 	/* Don't write beyond start of data */
 	if ( self->data_end + count > self->data_start ) {
 		count = self->data_start - self->data_end;
@@ -66,7 +66,7 @@ static int write_wrapped(buffer_t * self, uint8_t *input, int count) {
 
 
 static int read_normal(buffer_t * self, uint8_t *buf, int count) {
-	printf("read_normal: %d\n", count);
+
 	/* Don't read beyond end of data */
 	if ( count > self->count) {
 		count = self->count;
@@ -81,7 +81,6 @@ static int read_normal(buffer_t * self, uint8_t *buf, int count) {
 
 static int read_wrapped(buffer_t * self, uint8_t *buf, int count) {
 	
-	printf("read_wrapped: %d\n", count);
 	/* Don't read beyond end of buffer */
 	if ( self->data_start + count > self->buf_end ) {
 		count = self->buf_end - self->data_start;
@@ -126,7 +125,6 @@ static int rewind_wrapped(buffer_t * self, int count) {
 int buffer_write(buffer_t * self, uint8_t *input, int count) {
 	
 	int written;
-	printf("buffer_write: %d\n", count);
 
 	if (self->count == self->buf_size) {
 		return 0;
@@ -159,7 +157,7 @@ int buffer_write(buffer_t * self, uint8_t *input, int count) {
 		}
 	}
 
-	buffer_dump(self);
+	//buffer_dump(self);
 	return written;
 }
 
@@ -167,7 +165,7 @@ int buffer_write(buffer_t * self, uint8_t *input, int count) {
 int buffer_read(buffer_t * self, uint8_t *buf, int count) {
 
 	int read;
-	printf("buffer_read: %d\n", count);
+
 	if ( self->state == NORMAL_STATE ) {
 
 		read = read_normal(self, buf, count);
@@ -198,7 +196,7 @@ int buffer_read(buffer_t * self, uint8_t *buf, int count) {
 
 	} 
 
-	buffer_dump(self);
+	//buffer_dump(self);
 	return read;
 }
 
@@ -207,7 +205,6 @@ int buffer_rewind(buffer_t * self, int count) {
 
 	int rewinded;
 
-	printf("buffer_rewind: %d\n", count);
 	if ( self->state == NORMAL_STATE ) {
 		
 		rewinded = rewind_normal(self, count);
@@ -235,7 +232,7 @@ int buffer_rewind(buffer_t * self, int count) {
 		}
 	}
 
-	buffer_dump(self);
+	//buffer_dump(self);
 	return rewinded;
 }
 
