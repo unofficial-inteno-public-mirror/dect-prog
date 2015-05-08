@@ -172,7 +172,7 @@ void init_nvs_state(int dect_fd) {
 	system("/usr/bin/dect-reset > /dev/null");
 
 	/* Init input buffer */
-	buf = buffer_new(5000);
+	buf = buffer_new(500);
 	
 	/* Init busmail subsystem */
 	busmail_init(dect_fd, application_frame);
@@ -194,6 +194,8 @@ void handle_nvs_package(event_t *e) {
 		printf("buffer full\n");
 	}
 	
+	//buffer_dump(buf);
+
 	/* Process whole packets in buffer */
 	while(busmail_get(p, buf) == 0) {
 		busmail_dispatch(p);

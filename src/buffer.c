@@ -45,7 +45,7 @@ static int write_normal(buffer_t * self, uint8_t *input, int count) {
 	memcpy(self->data_end, input, count);
 	self->data_end += count;
 	self->count += count;
-	printf("wn self->count: %d\n", self->count);
+
 	return count;
 }
 
@@ -60,7 +60,7 @@ static int write_wrapped(buffer_t * self, uint8_t *input, int count) {
 	memcpy(self->data_end, input, count);
 	self->data_end += count;
 	self->count += count;
-	printf("ww self->count: %d\n", self->count);
+
 	return count;
 }
 
@@ -76,8 +76,6 @@ static int read_normal(buffer_t * self, uint8_t *buf, int count) {
 	self->data_start += count;
 	self->count -= count;
 	
-	printf("rn self->count: %d\n", self->count);
-		
 	return count;
 }
 
@@ -92,8 +90,6 @@ static int read_wrapped(buffer_t * self, uint8_t *buf, int count) {
 	memcpy(buf, self->data_start, count);
 	self->data_start += count;
 	self->count -= count;
-
-	printf("rw self->count: %d\n", self->count);
 
 	return count;
 }
@@ -163,14 +159,13 @@ int buffer_write(buffer_t * self, uint8_t *input, int count) {
 		}
 	}
 
-	printf("buffer_write: self->count %d\n", self->count);
 	buffer_dump(self);
 	return written;
 }
 
 
 int buffer_read(buffer_t * self, uint8_t *buf, int count) {
-	
+
 	int read;
 	printf("buffer_read: %d\n", count);
 	if ( self->state == NORMAL_STATE ) {
@@ -202,7 +197,7 @@ int buffer_read(buffer_t * self, uint8_t *buf, int count) {
 		}
 
 	} 
-	printf("buffer_read: self->count %d\n", self->count);
+
 	buffer_dump(self);
 	return read;
 }
@@ -239,7 +234,7 @@ int buffer_rewind(buffer_t * self, int count) {
 			rewinded += rewind_normal(self, count - rewinded);
 		}
 	}
-	printf("buffer_rewind: self->count %d\n", self->count);
+
 	buffer_dump(self);
 	return rewinded;
 }

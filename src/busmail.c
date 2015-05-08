@@ -330,7 +330,7 @@ static void information_frame(packet_t *p) {
 
 int busmail_get(packet_t *p, buffer_t *b) {
 	
-	int i, start, stop, size;
+	int i, start, stop, size, read = 0;
 	uint8_t crc = 0, crc_calc = 0;
 	uint8_t buf[5000];
 
@@ -341,9 +341,15 @@ int busmail_get(packet_t *p, buffer_t *b) {
 
 	/* Do we have a start of frame? */	
 	while (buffer_read(b, buf, 1) > 0) {
+		read++;
 		if (buf[0] == BUSMAIL_PACKET_HEADER) {
 			break;
 		}
+	}
+	
+	/* Return if we did not read any data */
+	if (read == 0) {
+		return -1;
 	}
 
 	/* Do we have a full header? */
