@@ -5,6 +5,7 @@
 
 #include "error.h"
 #include "busmail.h"
+#include "fifo.h"
 
 
 #define BUSMAIL_PACKET_HEADER 0x10
@@ -50,15 +51,13 @@ typedef struct {
 	uint8_t task_id;
 } tx_packet_t;
 
-tx_packet_t tx_packet;
-tx_packet_t * tx = &tx_packet;
 
+/* Module scope variables */
+static fifo_t * tx_fifo;
+static uint8_t tx_seq_l, rx_seq_l, tx_seq_r, rx_seq_r;
+static int busmail_fd;
+static void (*application_frame) (busmail_t *);
 
-
-uint8_t tx_seq_l, rx_seq_l, tx_seq_r, rx_seq_r;
-
-int busmail_fd;
-void (*application_frame) (busmail_t *);
 
 
 static uint8_t * make_tx_packet(uint8_t * tx, void * packet, int data_size) {
@@ -223,25 +222,31 @@ busmail_tx(uint8_t * data, int size, uint8_t pf, uint8_t task_id) {
 }
 
 
-
-
 void busmail_send(uint8_t * data, int size) {
+	
+	tx_packet_t * tx = calloc(sizeof(tx_packet_t), 1);
 	
 	tx->data = malloc(size);
 	memcpy(tx->data, data, size);
 	tx->task_id = API_TEST;
 	tx->size = size;
+
+	fifo_add(tx_fifo, tx);
 }
 
 
+/* Needed for test commands */
 void busmail_send0(uint8_t * data, int size) {
 
+	tx_packet_t * tx = calloc(sizeof(tx_packet_t), 1);
+	
 	tx->data = malloc(size);
 	memcpy(tx->data, data, size);
 	tx->task_id = 0;
 	tx->size = size;
-}
 
+	fifo_add(tx_fifo, tx);
+}
 
 
 void busmail_ack(void) {
@@ -255,6 +260,7 @@ void busmail_ack(void) {
 	send_packet(&sh, 1, busmail_fd);
 
 }
+
 
 static void supervisory_control_frame(packet_t *p) {
 	
@@ -317,9 +323,10 @@ static void information_frame(packet_t *p) {
 
 	/* Process application frame */
 	application_frame(m);
+	tx_packet_t * tx = (tx_packet_t *) fifo_get(tx_fifo);
+	
+	if (tx) {
 
-	if (tx->size > 0) {
-		
 		/* Transmit queued package */
 		busmail_tx(tx->data, tx->size, PF, tx->task_id);
 	
@@ -463,8 +470,6 @@ int busmail_init(int fd, void (*app_handler)(busmail_t *)) {
 	busmail_fd = fd;
 	application_frame = app_handler;
 
-	/* Reset queue */
-	tx->data = NULL;
-	tx->size = 0;
-	tx->task_id = 0;
+
+	tx_fifo = fifo_new();
 }
