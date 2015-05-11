@@ -78,20 +78,18 @@ static void rtx_eap_hw_test_cfm(busmail_t *m) {
 		if (t->data[0] == RSS_PENDING) {
 
 			printf("nvs_default: pending\n");
-			busmail_ack();
 
 		} else if (t->data[0] == RSS_SUCCESS) {
 
 			printf("nvs_default: ok\n");
 			printf("Set NVS\n");
-		uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x00, 0x01, 0x10, 0x00, \
+
+			/* Set hard coded RFPI 0x02, 0x3f, 0x80, 0x00, 0xf8 */
+			uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x00, 0x01, 0x10, 0x00, \
 				  0x00, 0x00, 0x00, 0x00, 0x0b, 0x02, 0x3f, 0x80, \
 				  0x00, 0xf8, 0x25, 0xc0, 0x01, 0x00, 0xf8, 0x23};
-		busmail_send0(data, sizeof(data), PF);
-			
-		} else {
-			printf("bogus\n");
-			busmail_ack();
+
+			busmail_send0(data, sizeof(data), PF);
 		}
 
 		break;
@@ -107,7 +105,6 @@ static void rtx_eap_hw_test_cfm(busmail_t *m) {
 	case PT_CMD_GET_NVS:
 		printf("PT_CMD_GET_NVS\n");
 		busmail_ack();
-		
 		exit(0);
 		break;
 	}
@@ -123,7 +120,6 @@ static void application_frame(busmail_t *m) {
 		
 	case API_FP_RESET_IND:
 		printf("API_FP_RESET_IND\n");
-		
 
 		if (reset_ind == 0) {
 			reset_ind = 1;
@@ -131,9 +127,6 @@ static void application_frame(busmail_t *m) {
 			printf("\nWRITE: API_FP_GET_FW_VERSION_REQ\n");
 			ApiFpGetFwVersionReqType m1 = { .Primitive = API_FP_GET_FW_VERSION_REQ, };
 			busmail_send((uint8_t *)&m1, sizeof(ApiFpGetFwVersionReqType), PF);
-
-		} else {
-			busmail_ack();
 		}
 
 		break;
@@ -154,8 +147,6 @@ static void application_frame(busmail_t *m) {
 
 	case API_SCL_STATUS_IND:
 		printf("API_SCL_STATUS_IND\n");
-		/* just ack the package */
-		busmail_ack();
 		break;
 	}
 }
