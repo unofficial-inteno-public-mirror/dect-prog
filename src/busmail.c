@@ -43,6 +43,17 @@
 #define SAMB_POLL_SET 0xc8
 #define SAMB_NO_POLL_SET 0xc0
 
+
+typedef struct {
+	uint8_t * data;
+	int size;
+} tx_packet_t;
+
+tx_packet_t tx_packet;
+tx_packet_t * tx = &tx_packet;
+
+
+
 uint8_t tx_seq_l, rx_seq_l, tx_seq_r, rx_seq_r;
 
 int busmail_fd;
@@ -176,11 +187,11 @@ static uint8_t make_info_frame(uint8_t pf) {
 
 
 
-busmail_send(uint8_t * data, int size, uint8_t pf) {
+busmail_tx(uint8_t * data, int size, uint8_t pf) {
 
 	uint8_t tx_seq_tmp, rx_seq_tmp;
 	busmail_t * r;	
-
+	
 	r = malloc(BUSMAIL_PACKET_OVER_HEAD - 1 + size);
 	if (!r) {
 		exit_failure("malloc");
@@ -208,6 +219,17 @@ busmail_send(uint8_t * data, int size, uint8_t pf) {
 	/* Update packet counter */
 	tx_seq_l++;
 
+}
+
+
+
+
+void busmail_send(uint8_t * data, int size, uint8_t pf) {
+	
+	tx->data = malloc(size);
+	memcpy(tx->data, data, size);
+	
+	tx->size = size;
 }
 
 
@@ -293,9 +315,7 @@ static void supervisory_control_frame(packet_t *p) {
 static void information_frame(packet_t *p) {
 
 	busmail_t * m = (busmail_t *) &p->data[0];
-
-	uint8_t pf, sh, ih;
-	
+	uint8_t pf, sh, ih;	
 
 	/* Drop unwanted frames */
 	/* if( m->program_id != API_PROG_ID ) { */
@@ -322,6 +342,21 @@ static void information_frame(packet_t *p) {
 
 	/* Process application frame */
 	application_frame(m);
+
+	if (tx->size > 0) {
+		
+		/* Transmit queued package */
+		busmail_tx(tx->data, tx->size, PF);
+	
+		/* Reset queue */
+		free(tx->data);
+		tx->size = 0;
+	} else {
+
+		/* No packet queued, ack with control frame */
+		//busmail_ack();
+	}
+		
 }
 
 
@@ -451,4 +486,8 @@ int busmail_init(int fd, void (*app_handler)(busmail_t *)) {
 	printf("busmail_init\n");
 	busmail_fd = fd;
 	application_frame = app_handler;
+
+	/* Reset queue */
+	tx->data = NULL;
+	tx->size = 0;
 }
