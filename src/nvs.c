@@ -89,7 +89,7 @@ static void rtx_eap_hw_test_cfm(busmail_t *m) {
 				  0x00, 0x00, 0x00, 0x00, 0x0b, 0x02, 0x3f, 0x80, \
 				  0x00, 0xf8, 0x25, 0xc0, 0x01, 0x00, 0xf8, 0x23};
 
-			busmail_send0(data, sizeof(data), PF);
+			busmail_send0(data, sizeof(data));
 		}
 
 		break;
@@ -99,7 +99,7 @@ static void rtx_eap_hw_test_cfm(busmail_t *m) {
 		printf("Get NVS\n");
 		uint8_t data1[] = {0x66, 0xf0, 0x00, 0x00, 0x01, 0x01, 0x05, 0x00, \
 				   0x00, 0x00, 0x00, 0x00, 0xff};
-		busmail_send0(data1, sizeof(data1), PF);
+		busmail_send0(data1, sizeof(data1));
 		break;
 
 	case PT_CMD_GET_NVS:
@@ -126,7 +126,7 @@ static void application_frame(busmail_t *m) {
 
 			printf("\nWRITE: API_FP_GET_FW_VERSION_REQ\n");
 			ApiFpGetFwVersionReqType m1 = { .Primitive = API_FP_GET_FW_VERSION_REQ, };
-			busmail_send((uint8_t *)&m1, sizeof(ApiFpGetFwVersionReqType), PF);
+			busmail_send((uint8_t *)&m1, sizeof(ApiFpGetFwVersionReqType));
 		}
 
 		break;
@@ -142,7 +142,7 @@ static void application_frame(busmail_t *m) {
 
 		printf("\nWRITE: NvsDefault\n");
 		uint8_t data[] = {0x66, 0xf0, 0x00, 0x00, 0x02, 0x01, 0x01, 0x00, 0x01};
-		busmail_send0(data, sizeof(data), PF);
+		busmail_send0(data, sizeof(data));
 		break;
 
 	case API_SCL_STATUS_IND:

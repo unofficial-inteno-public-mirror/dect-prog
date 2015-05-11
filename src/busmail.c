@@ -225,7 +225,7 @@ busmail_tx(uint8_t * data, int size, uint8_t pf, uint8_t task_id) {
 
 
 
-void busmail_send(uint8_t * data, int size, uint8_t pf) {
+void busmail_send(uint8_t * data, int size) {
 	
 	tx->data = malloc(size);
 	memcpy(tx->data, data, size);
@@ -234,7 +234,7 @@ void busmail_send(uint8_t * data, int size, uint8_t pf) {
 }
 
 
-void busmail_send0(uint8_t * data, int size, uint8_t pf) {
+void busmail_send0(uint8_t * data, int size) {
 
 	tx->data = malloc(size);
 	memcpy(tx->data, data, size);
