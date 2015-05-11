@@ -47,6 +47,7 @@
 typedef struct {
 	uint8_t * data;
 	int size;
+	uint8_t task_id;
 } tx_packet_t;
 
 tx_packet_t tx_packet;
@@ -187,7 +188,7 @@ static uint8_t make_info_frame(uint8_t pf) {
 
 
 
-busmail_tx(uint8_t * data, int size, uint8_t pf) {
+busmail_tx(uint8_t * data, int size, uint8_t pf, uint8_t task_id) {
 
 	uint8_t tx_seq_tmp, rx_seq_tmp;
 	busmail_t * r;	
@@ -200,7 +201,7 @@ busmail_tx(uint8_t * data, int size, uint8_t pf) {
 		
 	r->frame_header = make_info_frame(pf);
 	r->program_id = API_PROG_ID;
-	r->task_id = API_TEST;
+	r->task_id = task_id;
 	memcpy(&(r->mail_header), data, size);
 
 	tx_seq_tmp = (r->frame_header & TX_SEQ_MASK) >> TX_SEQ_OFFSET;
@@ -228,43 +229,17 @@ void busmail_send(uint8_t * data, int size, uint8_t pf) {
 	
 	tx->data = malloc(size);
 	memcpy(tx->data, data, size);
-	
+	tx->task_id = API_TEST;
 	tx->size = size;
 }
 
 
 void busmail_send0(uint8_t * data, int size, uint8_t pf) {
 
-	uint8_t tx_seq_tmp, rx_seq_tmp;
-	busmail_t * r;	
-
-	r = malloc(BUSMAIL_PACKET_OVER_HEAD - 1 + size);
-	if (!r) {
-		exit_failure("malloc");
-	}
-
-		
-	r->frame_header = make_info_frame(pf);
-	r->program_id = API_PROG_ID;
-	r->task_id = 0;
-	memcpy(&(r->mail_header), data, size);
-
-	tx_seq_tmp = (r->frame_header & TX_SEQ_MASK) >> TX_SEQ_OFFSET;
-	rx_seq_tmp = (r->frame_header & RX_SEQ_MASK) >> RX_SEQ_OFFSET;
-
-	printf("BUSMAIL_SEND_INFO\n");
-	printf("tx_seq_l: %d\n", tx_seq_l);
-	printf("rx_seq_l: %d\n", rx_seq_l);
-	printf("pf: %d\n", pf);
-
-	printf("frame_header: %x\n", (r->frame_header));
-	
-	send_packet(r, BUSMAIL_PACKET_OVER_HEAD - 1 + size, busmail_fd);
-	free(r);
-	
-	/* Update packet counter */
-	tx_seq_l++;
-
+	tx->data = malloc(size);
+	memcpy(tx->data, data, size);
+	tx->task_id = 0;
+	tx->size = size;
 }
 
 
@@ -346,11 +321,12 @@ static void information_frame(packet_t *p) {
 	if (tx->size > 0) {
 		
 		/* Transmit queued package */
-		busmail_tx(tx->data, tx->size, PF);
+		busmail_tx(tx->data, tx->size, PF, tx->task_id);
 	
 		/* Reset queue */
 		free(tx->data);
 		tx->size = 0;
+		tx->task_id = 0;
 	} else {
 
 		/* No packet queued, ack with control frame */
@@ -490,4 +466,5 @@ int busmail_init(int fd, void (*app_handler)(busmail_t *)) {
 	/* Reset queue */
 	tx->data = NULL;
 	tx->size = 0;
+	tx->task_id = 0;
 }
