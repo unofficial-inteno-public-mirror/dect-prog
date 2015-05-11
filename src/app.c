@@ -74,31 +74,26 @@ static void application_frame(busmail_t *m) {
 			busmail_send((uint8_t *)&m1, sizeof(ApiFpGetFwVersionReqType), PF);
 
 		} else {
-			busmail_ack();
+			
 		}
 
 		break;
 
 	case API_PROD_TEST_CFM:
 		printf("API_PROD_TEST_CFM\n");
-		busmail_ack();
 		break;
 
 	case RTX_EAP_HW_TEST_CFM:
 		printf("RTX_EAP_HW_TEST_CFM\n");
-		busmail_ack();
 		break;
 
 	case API_FP_GET_FW_VERSION_CFM:
 		printf("API_FP_GET_FW_VERSION_CFM\n");
-		fw_version_cfm(m);
 
 		/* Start protocol */
 		printf("\nWRITE: API_FP_MM_START_PROTOCOL_REQ\n");
-		ApiFpMmStartProtocolReqType * r = malloc(sizeof(ApiFpMmStartProtocolReqType));
-		r->Primitive = API_FP_MM_START_PROTOCOL_REQ;
-		busmail_send((uint8_t *)r, sizeof(ApiFpMmStartProtocolReqType), PF);
-		free(r);
+		ApiFpMmStartProtocolReqType r =  { .Primitive = API_FP_MM_START_PROTOCOL_REQ, };
+		busmail_send((uint8_t *)&r, sizeof(ApiFpMmStartProtocolReqType), PF);
 
 		/* Start registration */
 		printf("\nWRITE: API_FP_MM_SET_REGISTRATION_MODE_REQ\n");
@@ -111,15 +106,11 @@ static void application_frame(busmail_t *m) {
 
 	case API_SCL_STATUS_IND:
 		printf("API_SCL_STATUS_IND\n");
-		/* just ack the package */
-		busmail_ack();
 		break;
 
 
 	case API_FP_MM_SET_REGISTRATION_MODE_CFM:
 		printf("API_FP_MM_SET_REGISTRATION_MODE_CFM\n");
-		/* just ack the package */
-		busmail_ack();
 		break;
 	}
 }

@@ -318,9 +318,9 @@ static void information_frame(packet_t *p) {
 	uint8_t pf, sh, ih;	
 
 	/* Drop unwanted frames */
-	/* if( m->program_id != API_PROG_ID ) { */
-	/* 	return; */
-	/* } */
+	if( m->program_id != API_PROG_ID ) {
+		return;
+	}
 
 	packet_dump(p);
 	
@@ -354,7 +354,7 @@ static void information_frame(packet_t *p) {
 	} else {
 
 		/* No packet queued, ack with control frame */
-		//busmail_ack();
+		busmail_ack();
 	}
 		
 }
