@@ -6,7 +6,7 @@
 void * fifo_new(void);
 void fifo_add(void * _self, void * o);
 void * fifo_get(void * self);
-void * fifo_count(void * _self);
+int fifo_count(void * _self);
 
 
 #endif /* FIFO_H */

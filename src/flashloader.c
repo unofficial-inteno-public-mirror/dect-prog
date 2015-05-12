@@ -356,7 +356,7 @@ static void qspi_flash_type_cfm(packet_t *p) {
 
 
 
-static void config_target(event_t *e) {
+static void config_target(packet_t *p) {
 	
 	write_config_req_t *r = malloc(sizeof(write_config_req_t));
   
@@ -366,7 +366,7 @@ static void config_target(event_t *e) {
 	r->OffsetAddress = 0xf0000;
 	r->Config = QSPI_FLASH_CONFIG;
 
-	send_packet(r, sizeof(write_config_req_t), e->fd);
+	send_packet(r, sizeof(write_config_req_t), p->fd);
 	free(r);
 }
 

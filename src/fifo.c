@@ -86,7 +86,7 @@ void * fifo_get(void * _self) {
 }
 
 
-void * fifo_count(void * _self) {
+int fifo_count(void * _self) {
 
 	fifo_head_t * head = (fifo_head_t *) _self;
 	return head->count;
