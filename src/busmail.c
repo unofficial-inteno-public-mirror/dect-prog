@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <assert.h>
 
 #include "error.h"
 #include "busmail.h"
@@ -53,7 +54,7 @@ typedef struct {
 
 
 /* Module scope variables */
-static fifo_t * tx_fifo;
+static void * tx_fifo;
 static uint8_t tx_seq_l, rx_seq_l, tx_seq_r, rx_seq_r;
 static int busmail_fd;
 static void (*application_frame) (busmail_t *);
@@ -230,7 +231,8 @@ void busmail_send(uint8_t * data, int size) {
 	memcpy(tx->data, data, size);
 	tx->task_id = API_TEST;
 	tx->size = size;
-
+	
+	util_dump(tx->data, tx->size, "fifo_add");
 	fifo_add(tx_fifo, tx);
 }
 
@@ -296,7 +298,9 @@ static void supervisory_control_frame(packet_t *p) {
 static void information_frame(packet_t *p) {
 
 	busmail_t * m = (busmail_t *) &p->data[0];
-	uint8_t pf, sh, ih;	
+	uint8_t pf, sh, ih;
+	tx_packet_t * tx;
+	int ack = true;
 
 	/* Drop unwanted frames */
 	if( m->program_id != API_PROG_ID ) {
@@ -321,20 +325,28 @@ static void information_frame(packet_t *p) {
 		rx_seq_l = 0;
 	}
 
-	/* Process application frame */
+	/* Process application frame. The application frame callback will enqueue 
+	 outgoing packets on tx_fifo with busmail_send() */
 	application_frame(m);
-	tx_packet_t * tx = (tx_packet_t *) fifo_get(tx_fifo);
+
 	
-	if (tx) {
+	while ( fifo_count(tx_fifo) > 0 ) {
+
+		tx = (tx_packet_t *) fifo_get(tx_fifo);
+
+		assert(tx != NULL);
+		assert(tx->data);
+		assert(tx->size > 0);
+
+	       /* We got a packet, no need to send ack frame */
+		ack = false;
 
 		/* Transmit queued package */
 		busmail_tx(tx->data, tx->size, PF, tx->task_id);
-	
-		/* Reset queue */
-		free(tx->data);
-		tx->size = 0;
-		tx->task_id = 0;
-	} else {
+		free(tx);
+	}
+
+	if (ack) {
 
 		/* No packet queued, ack with control frame */
 		busmail_ack();
@@ -357,7 +369,7 @@ int busmail_get(packet_t *p, buffer_t *b) {
 	/* 	return -1; */
 	/* } */
 
-	/* Do we have a start of frame? */	
+	/* Do we have a start of frame? */
 	while (buffer_read(b, buf, 1) > 0) {
 		read++;
 		if (buf[0] == BUSMAIL_PACKET_HEADER) {
