@@ -5,6 +5,11 @@
 #include <termios.h>
 #include <stdio.h>
 #include <string.h>
+#include <signal.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
+
 
 #include "dect.h"
 #include "tty.h"
@@ -20,12 +25,20 @@
 #define MAX_EVENTS 10
 #define BUF_SIZE 50000
 
+struct sigaction act;
+
+void sighandler(int signum, siginfo_t * info, void * ptr) {
+
+	printf("Recieved signal %d\n", signum);
+}
+
+
 
 int main(int argc, char * argv[]) {
 	
 	struct epoll_event ev, events[MAX_EVENTS];
 	int state = BOOT_STATE;
-	int epoll_fd, nfds, i, count;
+	int epoll_fd, nfds, i, count, l;
 	uint8_t inbuf[BUF_SIZE];
 	uint8_t outbuf[BUF_SIZE];
 	void (*state_event_handler)(event_t *e);
@@ -34,11 +47,23 @@ int main(int argc, char * argv[]) {
 	event_t *e = &event;
 	config_t c;
 	config_t *config = &c;
+	struct sockaddr_in my_addr, peer_addr;
+	socklen_t peer_add_size;
+
 
 	e->in = inbuf;
 	e->out = outbuf;
 
 	setbuf(stdout, NULL);
+	
+	/* Setup signal handler. When writing data to a
+	   client that closed the connection we get a 
+	   SIGPIPE. We need to catch it to avoid being killed */
+	memset(&act, 0, sizeof(act));
+	act.sa_sigaction = sighandler;
+	act.sa_flags = SA_SIGINFO;
+	sigaction(SIGPIPE, &act, NULL);
+	
 
 	/* Setup input */
 	epoll_fd = epoll_create(10);
@@ -50,7 +75,28 @@ int main(int argc, char * argv[]) {
 	if (dect_fd == -1) {
 		exit_failure("open\n");
 	}
+	
+	
+	/* Setup listening socket */
+	memset(&my_addr, 0, sizeof(my_addr));
+	my_addr.sin_family = AF_INET;
+	my_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	my_addr.sin_port = htons(7777);
+	
+	if ( (l = socket(AF_INET, SOCK_STREAM, 0)) == -1 ) {
+		exit_failure("socket");
+	}
 
+	if ( (bind(l, (struct sockaddr *) &my_addr, sizeof(struct sockaddr))) == -1) {
+		exit_failure("bind");
+	}
+	
+	if ( (listen(l, MAX_LISTENERS)) == -1 ) {
+		exit_failure("bind");
+	}
+
+	
+	
 	/* Setup epoll instance */
 	ev.events = EPOLLIN;
 	ev.data.fd = dect_fd;
