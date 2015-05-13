@@ -38,7 +38,7 @@ int main(int argc, char * argv[]) {
 	
 	struct epoll_event ev, events[MAX_EVENTS];
 	int state = BOOT_STATE;
-	int epoll_fd, nfds, i, count, l;
+	int epoll_fd, nfds, i, count, fd_listen;
 	uint8_t inbuf[BUF_SIZE];
 	uint8_t outbuf[BUF_SIZE];
 	void (*state_event_handler)(event_t *e);
@@ -65,17 +65,26 @@ int main(int argc, char * argv[]) {
 	sigaction(SIGPIPE, &act, NULL);
 	
 
-	/* Setup input */
+	/* Setup epoll instance */
 	epoll_fd = epoll_create(10);
 	if (epoll_fd == -1) {
 		exit_failure("epoll_create\n");
 	}
 
+
+	/* Setup serial input */
 	dect_fd = open("/dev/ttyS1", O_RDWR);
 	if (dect_fd == -1) {
 		exit_failure("open\n");
 	}
-	
+
+	ev.events = EPOLLIN;
+	ev.data.fd = dect_fd;
+
+	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, dect_fd, &ev) == -1) {
+		exit_failure("epoll_ctl\n");
+	}
+
 	
 	/* Setup listening socket */
 	memset(&my_addr, 0, sizeof(my_addr));
@@ -83,28 +92,26 @@ int main(int argc, char * argv[]) {
 	my_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	my_addr.sin_port = htons(7777);
 	
-	if ( (l = socket(AF_INET, SOCK_STREAM, 0)) == -1 ) {
+	if ( (fd_listen = socket(AF_INET, SOCK_STREAM, 0)) == -1 ) {
 		exit_failure("socket");
 	}
 
-	if ( (bind(l, (struct sockaddr *) &my_addr, sizeof(struct sockaddr))) == -1) {
+	if ( (bind(fd_listen, (struct sockaddr *) &my_addr, sizeof(struct sockaddr))) == -1) {
 		exit_failure("bind");
 	}
 	
-	if ( (listen(l, MAX_LISTENERS)) == -1 ) {
+	if ( (listen(fd_listen, MAX_LISTENERS)) == -1 ) {
 		exit_failure("bind");
 	}
 
 	
-	
-	/* Setup epoll instance */
 	ev.events = EPOLLIN;
-	ev.data.fd = dect_fd;
+	ev.data.fd = fd_listen;
 
-	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, dect_fd, &ev) == -1) {
+	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd_listen, &ev) == -1) {
 		exit_failure("epoll_ctl\n");
 	}
-	
+
 
 	/* Check user arguments and init config */
 	check_args(argc, argv, config);
@@ -165,6 +172,11 @@ int main(int argc, char * argv[]) {
 				memset(e->out, 0, BUF_SIZE);
 				memset(e->in, 0, BUF_SIZE);
 			}
+
+			if (events[i].data.fd == fd_listen) {
+				printf("barf\n");
+			}
+
 		}
 		
 	}
