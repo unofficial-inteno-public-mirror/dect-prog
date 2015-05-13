@@ -38,7 +38,7 @@ int main(int argc, char * argv[]) {
 	
 	struct epoll_event ev, events[MAX_EVENTS];
 	int state = BOOT_STATE;
-	int epoll_fd, nfds, i, count, listen_fd, client_fd;
+	int epoll_fd, nfds, i, count, listen_fd, client_fd, ret;
 	uint8_t inbuf[BUF_SIZE];
 	uint8_t outbuf[BUF_SIZE];
 	void (*state_event_handler)(event_t *e);
@@ -49,6 +49,7 @@ int main(int argc, char * argv[]) {
 	config_t *config = &c;
 	struct sockaddr_in my_addr, peer_addr;
 	socklen_t peer_addr_size;
+	uint8_t buf[BUF_SIZE];
 
 
 	e->in = inbuf;
@@ -171,9 +172,7 @@ int main(int argc, char * argv[]) {
 				e->incount = 0;
 				memset(e->out, 0, BUF_SIZE);
 				memset(e->in, 0, BUF_SIZE);
-			}
-
-			if (events[i].data.fd == listen_fd) {
+			} else if (events[i].data.fd == listen_fd) {
 
 				peer_addr_size = sizeof(peer_addr);
 				if ( (client_fd = accept(listen_fd, (struct sockaddr *) &peer_addr, &peer_addr_size)) == -1) {
@@ -190,6 +189,34 @@ int main(int argc, char * argv[]) {
 						exit_failure("epoll_ctl\n");
 					}
 				}
+
+			} else {
+				
+				client_fd = events[i].data.fd;
+
+				/* Client connection */
+				ret = recv(client_fd, buf, sizeof(buf), 0);
+				if ( ret == -1 ) {
+					perror("recv");
+				} else if ( ret == 0 ) {
+					
+					/* Client connection closed */
+					printf("client closed connection\n");
+					if (close(client_fd) == -1) {
+						exit_failure("close");
+					}
+					
+					/* Deregister fd */
+					if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) == -1) {
+						exit_failure("epoll_ctl\n");
+					}
+
+				} else {
+
+					/* Data is read from client */
+					printf("client: %s\n", buf);
+				}
+				
 			}
 		}
 	}
