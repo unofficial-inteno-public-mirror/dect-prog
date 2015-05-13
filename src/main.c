@@ -38,7 +38,7 @@ int main(int argc, char * argv[]) {
 	
 	struct epoll_event ev, events[MAX_EVENTS];
 	int state = BOOT_STATE;
-	int epoll_fd, nfds, i, count, fd_listen;
+	int epoll_fd, nfds, i, count, listen_fd, client_fd;
 	uint8_t inbuf[BUF_SIZE];
 	uint8_t outbuf[BUF_SIZE];
 	void (*state_event_handler)(event_t *e);
@@ -48,7 +48,7 @@ int main(int argc, char * argv[]) {
 	config_t c;
 	config_t *config = &c;
 	struct sockaddr_in my_addr, peer_addr;
-	socklen_t peer_add_size;
+	socklen_t peer_addr_size;
 
 
 	e->in = inbuf;
@@ -92,23 +92,23 @@ int main(int argc, char * argv[]) {
 	my_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	my_addr.sin_port = htons(7777);
 	
-	if ( (fd_listen = socket(AF_INET, SOCK_STREAM, 0)) == -1 ) {
+	if ( (listen_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1 ) {
 		exit_failure("socket");
 	}
 
-	if ( (bind(fd_listen, (struct sockaddr *) &my_addr, sizeof(struct sockaddr))) == -1) {
+	if ( (bind(listen_fd, (struct sockaddr *) &my_addr, sizeof(struct sockaddr))) == -1) {
 		exit_failure("bind");
 	}
 	
-	if ( (listen(fd_listen, MAX_LISTENERS)) == -1 ) {
+	if ( (listen(listen_fd, MAX_LISTENERS)) == -1 ) {
 		exit_failure("bind");
 	}
 
 	
 	ev.events = EPOLLIN;
-	ev.data.fd = fd_listen;
+	ev.data.fd = listen_fd;
 
-	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd_listen, &ev) == -1) {
+	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, listen_fd, &ev) == -1) {
 		exit_failure("epoll_ctl\n");
 	}
 
@@ -173,13 +173,26 @@ int main(int argc, char * argv[]) {
 				memset(e->in, 0, BUF_SIZE);
 			}
 
-			if (events[i].data.fd == fd_listen) {
-				printf("barf\n");
+			if (events[i].data.fd == listen_fd) {
+
+				peer_addr_size = sizeof(peer_addr);
+				if ( (client_fd = accept(listen_fd, (struct sockaddr *) &peer_addr, &peer_addr_size)) == -1) {
+					exit_failure("accept");
+				} else {
+
+					printf("accepted connection: %d\n", client_fd);
+
+					/* Add new connection to epoll instance */
+					ev.events = EPOLLIN;
+					ev.data.fd = client_fd;
+
+					if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &ev) == -1) {
+						exit_failure("epoll_ctl\n");
+					}
+				}
 			}
-
 		}
-		
 	}
-
+	
 	return 0;
 }
