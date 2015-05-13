@@ -172,6 +172,7 @@ int main(int argc, char * argv[]) {
 				e->incount = 0;
 				memset(e->out, 0, BUF_SIZE);
 				memset(e->in, 0, BUF_SIZE);
+				
 			} else if (events[i].data.fd == listen_fd) {
 
 				peer_addr_size = sizeof(peer_addr);
@@ -193,12 +194,18 @@ int main(int argc, char * argv[]) {
 			} else {
 				
 				client_fd = events[i].data.fd;
-
+				
 				/* Client connection */
 				ret = recv(client_fd, buf, sizeof(buf), 0);
 				if ( ret == -1 ) {
+					
 					perror("recv");
 				} else if ( ret == 0 ) {
+
+					/* Deregister fd */
+					if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) == -1) {
+						exit_failure("epoll_ctl\n");
+					}
 					
 					/* Client connection closed */
 					printf("client closed connection\n");
@@ -206,15 +213,11 @@ int main(int argc, char * argv[]) {
 						exit_failure("close");
 					}
 					
-					/* Deregister fd */
-					if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client_fd, NULL) == -1) {
-						exit_failure("epoll_ctl\n");
-					}
 
 				} else {
 
 					/* Data is read from client */
-					printf("client: %s\n", buf);
+					util_dump(buf, ret, "[CLIENT]");
 				}
 				
 			}
