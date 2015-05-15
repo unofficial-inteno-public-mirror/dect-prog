@@ -350,15 +350,13 @@ static void information_frame(packet_t *p) {
 	application_frame(m);
 
 	if ( client_fd_g > 0 ) {
-		printf("we have client at: %d\n", client_fd_g);
-		printf("size: %d\n", p->size - BUSMAIL_PACKET_OVER_HEAD);
 
+		/* Send packet to connected client */
 		client_p.type = CLIENT_PKT_TYPE;
-		client_p.size = CLIENT_PKT_HEADER_SIZE + 4;
-		uint8_t hej[4] = { 0xaa, 0xbb, 0xcc, 0xdd };
-		//memcpy(&(client_p.data), m->frame_header, p->size - BUSMAIL_PACKET_OVER_HEAD);
-		memcpy(&(client_p.data), hej, 4);
-		
+		client_p.size = CLIENT_PKT_HEADER_SIZE + p->size - 3;
+		memcpy(&(client_p.data), &(p->data[3]), p->size - 3);
+
+		util_dump(&p->data[3], p->size - 3, "[TO CLIENT]");		
 		if (send(client_fd_g, &client_p, client_p.size, 0) == -1) {
 			perror("send");
 		}
