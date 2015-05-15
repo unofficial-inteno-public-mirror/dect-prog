@@ -89,13 +89,22 @@ static void application_frame(busmail_t *m) {
 
 	case API_FP_GET_FW_VERSION_CFM:
 		printf("API_FP_GET_FW_VERSION_CFM\n");
+		
+		/* Setup terminal id */
+		ApiFpCcFeaturesReqType fr = { .Primitive = API_FP_FEATURES_REQ, 
+					      .ApiFpCcFeature = API_FP_CC_EXTENDED_TERMINAL_ID_SUPPORT };
+		busmail_send((uint8_t *)&fr, sizeof(ApiFpCcFeaturesReqType));
+		break;
+
+	case API_FP_FEATURES_CFM:
+		printf("API_FP_FEATURES_CFM\n");
 
 		/* Start protocol */
 		printf("\nWRITE: API_FP_MM_START_PROTOCOL_REQ\n");
 		ApiFpMmStartProtocolReqType r =  { .Primitive = API_FP_MM_START_PROTOCOL_REQ, };
 		busmail_send((uint8_t *)&r, sizeof(ApiFpMmStartProtocolReqType));
+		
 		break;
-
 
 	case API_SCL_STATUS_IND:
 		printf("API_SCL_STATUS_IND\n");
