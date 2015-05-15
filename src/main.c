@@ -33,6 +33,9 @@ void sighandler(int signum, siginfo_t * info, void * ptr) {
 }
 
 
+int client_fd_g = 0;
+
+
 
 int main(int argc, char * argv[]) {
 	
@@ -163,8 +166,6 @@ int main(int argc, char * argv[]) {
 				if (e->outcount > 0) {
 					util_dump(e->out, e->outcount, "[WRITE]");
 					write(e->fd, e->out, e->outcount);
-
-				
 				}
 
 				/* Reset event_t */
@@ -189,8 +190,10 @@ int main(int argc, char * argv[]) {
 					if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &ev) == -1) {
 						exit_failure("epoll_ctl\n");
 					}
-				}
 
+					client_fd_g = client_fd;
+				}
+				
 			} else {
 				
 				client_fd = events[i].data.fd;
@@ -213,11 +216,15 @@ int main(int argc, char * argv[]) {
 						exit_failure("close");
 					}
 					
+					client_fd_g = 0;
 
 				} else {
 
 					/* Data is read from client */
+					/* We should buffer packet here to make 
+					   sure we send a complete application frame */
 					util_dump(buf, ret, "[CLIENT]");
+					busmail_send(buf, ret);
 				}
 				
 			}
