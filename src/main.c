@@ -220,8 +220,13 @@ int main(int argc, char * argv[]) {
 					if (close(client_fd) == -1) {
 						exit_failure("close");
 					}
-
+					
+					list_add(client_list, 20);
+					list_delete(client_list, 14);
 					list_delete(client_list, client_fd);
+					list_delete(client_list, 9);
+					list_add(client_list, 20);
+					list_delete(client_list, 9);
 
 				} else {
 

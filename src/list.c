@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 
 
 typedef struct {
@@ -59,25 +60,60 @@ void list_delete(void * _self, int fd) {
 	
 	list_head_t * head = (list_head_t *) _self;
 	int i;
-	list_t * list_obj;
+	list_t * obj, * prev, * next;
+
 	printf("list_delete: %d\n", fd);
-	printf("head->count: %d\n", head->count);
+
 	if ( head->count == 0 ) {
-		printf("barf\n");
 		return;
 	}
 	
-	list_obj = head->first;
+	obj = head->first;
+	
+	/* Loop over all objects in list */
+	for (;;) {
 
-	if ( list_obj->fd == fd ) {
-		
-		printf("delete fd: %d\n", list_obj->fd);
+		if ( obj->fd == fd ) {
+			/* We have found our object */
 
-		head->first = NULL;
-		head->last = NULL;
-		free(list_obj);
-		
-		head->count--;
+			if ( ! obj->prev && obj->next ) {
+
+				/* Object is at start of list with object follwing */
+				next = obj->next;
+				head->first = next;
+
+			} else if ( obj->prev && obj->next ) {
+				
+				/* Object in middle of list */
+				next = obj->next;
+				prev = obj->prev;
+				next->prev = prev;
+				prev->next = next;
+
+			} else if ( ! obj->next && obj->prev ) {
+
+				/* Object is at end of list with an object before it */
+				head->last = obj->prev;
+
+			} else if ( ! obj->prev && ! obj->next ) {
+
+				/* Object is only object in the list */
+				head->first = NULL;
+				head->last = NULL;
+			}
+
+			free(obj);
+			head->count--;
+			break;
+		}
+
+		if ( obj->next ) {
+			/* Next object in list */
+			obj = obj->next;
+		} else {
+			/* End of list */
+			break;
+		}
 	}
 	
 	printf("head->count: %d\n", head->count);
