@@ -71,7 +71,6 @@ static uint8_t tx_seq_l, rx_seq_l, tx_seq_r, rx_seq_r;
 static int busmail_fd;
 static void (*application_frame) (busmail_t *);
 
-extern int client_fd_g;
 
 
 static uint8_t * make_tx_packet(uint8_t * tx, void * packet, int data_size) {
@@ -247,7 +246,7 @@ void busmail_send(uint8_t * data, int size) {
 	
 	util_dump(tx->data, tx->size, "fifo_add");
 	//fifo_add(tx_fifo, tx);
-
+       
 	busmail_tx(tx->data, tx->size, PF, tx->task_id);
 	free(tx);
 }
@@ -349,18 +348,20 @@ static void information_frame(packet_t *p) {
 	 outgoing packets on tx_fifo and directly transmit packages with busmail_send() */
 	application_frame(m);
 
-	if ( client_fd_g > 0 ) {
+	//list_each(client_list, send_packet);
 
-		/* Send packet to connected client */
-		client_p.type = CLIENT_PKT_TYPE;
-		client_p.size = CLIENT_PKT_HEADER_SIZE + p->size - 3;
-		memcpy(&(client_p.data), &(p->data[3]), p->size - 3);
+	/* if ( client_fd_g > 0 ) { */
 
-		util_dump(&p->data[3], p->size - 3, "[TO CLIENT]");		
-		if (send(client_fd_g, &client_p, client_p.size, 0) == -1) {
-			perror("send");
-		}
-	}
+	/* 	/\* Send packet to connected client *\/ */
+	/* 	client_p.type = CLIENT_PKT_TYPE; */
+	/* 	client_p.size = CLIENT_PKT_HEADER_SIZE + p->size - 3; */
+	/* 	memcpy(&(client_p.data), &(p->data[3]), p->size - 3); */
+
+	/* 	util_dump(&p->data[3], p->size - 3, "[TO CLIENT]");		 */
+	/* 	if (send(client_fd_g, &client_p, client_p.size, 0) == -1) { */
+	/* 		perror("send"); */
+	/* 	} */
+	/* } */
 
 	/* Send application frame to connected clients */
 	

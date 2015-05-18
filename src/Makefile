@@ -15,7 +15,7 @@ endif
 
 
 
-dect-prog: boot.o tty.o error.o main.o state.o util.o preloader.o flashloader.o Crc.o app.o buffer.o busmail.o nvs.o fifo.o
+dect-prog: boot.o tty.o error.o main.o state.o util.o preloader.o flashloader.o Crc.o app.o buffer.o busmail.o nvs.o fifo.o list.o
 	$(CC) $(INCLUDE_PATHS) -o $@ $^
 
 

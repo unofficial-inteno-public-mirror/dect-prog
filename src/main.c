@@ -19,6 +19,7 @@
 #include "util.h"
 #include "app.h"
 #include "nvs.h"
+#include "list.h"
 
 
 
@@ -32,8 +33,9 @@ void sighandler(int signum, siginfo_t * info, void * ptr) {
 	printf("Recieved signal %d\n", signum);
 }
 
-
-int client_fd_g = 0;
+#define CLIENT_MAX 10
+int client_fds[CLIENT_MAX];
+int client_count = 0;
 
 
 
@@ -54,6 +56,8 @@ int main(int argc, char * argv[]) {
 	socklen_t peer_addr_size;
 	uint8_t buf[BUF_SIZE];
 
+	/* Init clients */
+	void * client_list = list_new();
 
 	e->in = inbuf;
 	e->out = outbuf;
@@ -191,7 +195,8 @@ int main(int argc, char * argv[]) {
 						exit_failure("epoll_ctl\n");
 					}
 
-					client_fd_g = client_fd;
+					/* Add client */
+					list_add(client_list, client_fd);
 				}
 				
 			} else {
@@ -215,8 +220,8 @@ int main(int argc, char * argv[]) {
 					if (close(client_fd) == -1) {
 						exit_failure("close");
 					}
-					
-					client_fd_g = 0;
+
+					list_delete(client_list, client_fd);
 
 				} else {
 
