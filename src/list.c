@@ -31,7 +31,6 @@ void list_add(void * _self, int fd) {
 	
 	list_head_t * head = (list_head_t *) _self;
 	list_t * new_last, * last;
-	printf("list_add: %d\n", fd);
 
 	new_last = (list_t *) calloc(sizeof(list_t), 1);
 	new_last->fd = fd;
@@ -51,7 +50,8 @@ void list_add(void * _self, int fd) {
 
 	head->last = new_last;
 	head->count++;
-	printf("head->count: %d\n", head->count);
+	
+	return;
 }
 
 
@@ -61,8 +61,6 @@ void list_delete(void * _self, int fd) {
 	list_head_t * head = (list_head_t *) _self;
 	int i;
 	list_t * obj, * prev, * next;
-
-	printf("list_delete: %d\n", fd);
 
 	if ( head->count == 0 ) {
 		return;
@@ -80,10 +78,11 @@ void list_delete(void * _self, int fd) {
 
 				/* Object is at start of list with object follwing */
 				next = obj->next;
+				next->prev = NULL;
 				head->first = next;
 
 			} else if ( obj->prev && obj->next ) {
-				
+
 				/* Object in middle of list */
 				next = obj->next;
 				prev = obj->prev;
@@ -93,7 +92,9 @@ void list_delete(void * _self, int fd) {
 			} else if ( ! obj->next && obj->prev ) {
 
 				/* Object is at end of list with an object before it */
-				head->last = obj->prev;
+				prev = obj->prev;
+				prev->next = NULL;
+				head->last = prev;
 
 			} else if ( ! obj->prev && ! obj->next ) {
 
@@ -112,10 +113,39 @@ void list_delete(void * _self, int fd) {
 			obj = obj->next;
 		} else {
 			/* End of list */
+
 			break;
 		}
 	}
 	
-	printf("head->count: %d\n", head->count);
+	return;
 }
 
+
+void list_each(void * _self, void (*fn) (int fd)) {
+	
+	list_head_t * head = (list_head_t *) _self;
+	void (*callback)(int fd) = fn;
+	list_t * obj;
+
+	if ( head->count == 0 ) {
+		return;
+	}
+	
+	obj = head->first;
+
+	/* Loop over all objects in list */
+	for (;;) {
+		callback(obj->fd);
+		
+		if ( obj->next ) {
+			/* Next object in list */
+			obj = obj->next;
+		} else {
+			/* End of list */
+			break;
+		}
+	}
+	
+	return;
+}

@@ -38,6 +38,10 @@ int client_fds[CLIENT_MAX];
 int client_count = 0;
 
 
+void list_connected(int fd) {
+	printf("connected fd:s : %d\n", fd);
+}
+
 
 int main(int argc, char * argv[]) {
 	
@@ -197,6 +201,7 @@ int main(int argc, char * argv[]) {
 
 					/* Add client */
 					list_add(client_list, client_fd);
+					list_each(client_list, list_connected);
 				}
 				
 			} else {
@@ -221,12 +226,8 @@ int main(int argc, char * argv[]) {
 						exit_failure("close");
 					}
 					
-					list_add(client_list, 20);
-					list_delete(client_list, 14);
 					list_delete(client_list, client_fd);
-					list_delete(client_list, 9);
-					list_add(client_list, 20);
-					list_delete(client_list, 9);
+					list_each(client_list, list_connected);
 
 				} else {
 
