@@ -70,7 +70,8 @@ static void * tx_fifo;
 static uint8_t tx_seq_l, rx_seq_l, tx_seq_r, rx_seq_r;
 static int busmail_fd;
 static void (*application_frame) (busmail_t *);
-
+extern void * client_list;
+client_packet_t client_p;
 
 
 static uint8_t * make_tx_packet(uint8_t * tx, void * packet, int data_size) {
@@ -313,13 +314,23 @@ static void supervisory_control_frame(packet_t *p) {
 
 }
 
+
+static void send_to_client(int fd) {
+
+	printf("send_to_client: %d\n", fd);
+	
+	if (send(fd, &client_p, client_p.size, 0) == -1) {
+		perror("send");
+	}
+}
+
 static void information_frame(packet_t *p) {
 
 	busmail_t * m = (busmail_t *) &p->data[0];
 	uint8_t pf, sh, ih;
 	tx_packet_t * tx;
 	int ack = true;
-	client_packet_t client_p;
+
 
 	/* Drop unwanted frames */
 	if( m->program_id != API_PROG_ID ) {
@@ -348,39 +359,12 @@ static void information_frame(packet_t *p) {
 	 outgoing packets on tx_fifo and directly transmit packages with busmail_send() */
 	application_frame(m);
 
-	//list_each(client_list, send_packet);
-
-	/* if ( client_fd_g > 0 ) { */
-
-	/* 	/\* Send packet to connected client *\/ */
-	/* 	client_p.type = CLIENT_PKT_TYPE; */
-	/* 	client_p.size = CLIENT_PKT_HEADER_SIZE + p->size - 3; */
-	/* 	memcpy(&(client_p.data), &(p->data[3]), p->size - 3); */
-
-	/* 	util_dump(&p->data[3], p->size - 3, "[TO CLIENT]");		 */
-	/* 	if (send(client_fd_g, &client_p, client_p.size, 0) == -1) { */
-	/* 		perror("send"); */
-	/* 	} */
-	/* } */
-
-	/* Send application frame to connected clients */
-	
-
-	/* while ( fifo_count(tx_fifo) > 0 ) { */
-
-	/* 	tx = (tx_packet_t *) fifo_get(tx_fifo); */
-
-	/* 	assert(tx != NULL); */
-	/* 	assert(tx->data); */
-	/* 	assert(tx->size > 0); */
-
-	/*        /\* We got a packet, no need to send ack frame *\/ */
-	/* 	ack = false; */
-
-	/* 	/\* Transmit queued package *\/ */
-	/* 	busmail_tx(tx->data, tx->size, PF, tx->task_id); */
-	/* 	free(tx); */
-	/* } */
+	/* Send packet to connected client */
+	client_p.type = CLIENT_PKT_TYPE;
+	client_p.size = CLIENT_PKT_HEADER_SIZE + p->size - 3;
+	memcpy(&(client_p.data), &(p->data[3]), p->size - 3);
+	util_dump(&p->data[3], p->size - 3, "[TO CLIENT]");
+	list_each(client_list, send_to_client);
 
 	/* Always ack with control frame */
 	busmail_ack();

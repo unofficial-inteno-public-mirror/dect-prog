@@ -9,8 +9,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-
-
 #include "dect.h"
 #include "tty.h"
 #include "error.h"
@@ -33,10 +31,7 @@ void sighandler(int signum, siginfo_t * info, void * ptr) {
 	printf("Recieved signal %d\n", signum);
 }
 
-#define CLIENT_MAX 10
-int client_fds[CLIENT_MAX];
-int client_count = 0;
-
+void * client_list;
 
 void list_connected(int fd) {
 	printf("connected fd:s : %d\n", fd);
@@ -60,8 +55,8 @@ int main(int argc, char * argv[]) {
 	socklen_t peer_addr_size;
 	uint8_t buf[BUF_SIZE];
 
-	/* Init clients */
-	void * client_list = list_new();
+	/* Init client list */
+	client_list = list_new();
 
 	e->in = inbuf;
 	e->out = outbuf;
