@@ -111,8 +111,14 @@ void init_boot_state(int dect_fd) {
 	read_preloader();
 	calculate_checksum();
 	
+	printf("DECT TX PULLDOWN\n");
+	system("/sbin/brcm_fw_tool set -x 118 -p 1 > /dev/null");
+	
 	printf("RESET_DECT\n");
 	system("/usr/bin/dect-reset > /dev/null");
+
+	printf("DECT TX TO BRCM RX\n");
+	system("/sbin/brcm_fw_tool set -x 118 -p 0 > /dev/null");
 	
 	tty_set_raw(dect_fd);
 	tty_set_baud(dect_fd, B19200);
